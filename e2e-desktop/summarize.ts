@@ -55,7 +55,7 @@ const outputs = list(path.join(dir, "outputs"), () => true);
 const hashes = outputs.map((f) => `| ${path.relative(dir, f)} | ${statSync(f).size} | \`${sha(f)}\` |`);
 const shots = list(path.join(dir, "screenshots"), (f) => f.endsWith(".png"));
 
-const md = `# SoftEther Manager Desktop — E2E run
+const md = `# Server Manager for SoftEther VPN Desktop — E2E run
 
 - Started: ${results.stats?.startTime ?? "?"}
 - Duration: ${((results.stats?.duration ?? 0) / 1000).toFixed(1)} s

@@ -1,5 +1,5 @@
 // Shared environment of the desktop E2E suite: two real SoftEther VPN Servers, a real SoftEther VPN Client
-// (for .vpn import checks) and the real SoftEther Manager desktop app built into e2e-desktop/.build.
+// (for .vpn import checks) and the real Server Manager for SoftEther VPN desktop app built into e2e-desktop/.build.
 import path from "node:path";
 import os from "node:os";
 

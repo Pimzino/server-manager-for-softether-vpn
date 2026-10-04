@@ -226,7 +226,7 @@ test("hub-admin connection (hub password, not saved) sees only its own hub", asy
 });
 
 test("Settings/Preferences through the native menu, and a preference change applies", async ({}, ti) => {
-  if (process.platform === "darwin") await clickMenu(a.app, ["SoftEther Manager", /^Settings/]);
+  if (process.platform === "darwin") await clickMenu(a.app, ["Server Manager for SoftEther VPN", /^Settings/]);
   else await clickMenu(a.app, ["File", /^Settings/]);
   await expect.poll(() => route(page)).toBe("/preferences");
   await expect(page.getByTestId("prefs-save-state")).toBeVisible();

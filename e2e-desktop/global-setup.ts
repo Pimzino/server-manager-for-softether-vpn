@@ -43,7 +43,7 @@ function removeWinService(name: string) {
 
 /** Register `<dir>/<binary>.exe /service` as an on-demand service and start it. */
 function startWinService(name: string, dir: string, binary: string) {
-  const created = sc(["create", name, "binPath=", `"${path.join(dir, `${binary}.exe`)}" /service`, "start=", "demand", "DisplayName=", `SoftEther Manager E2E ${name}`]);
+  const created = sc(["create", name, "binPath=", `"${path.join(dir, `${binary}.exe`)}" /service`, "start=", "demand", "DisplayName=", `Server Manager for SoftEther VPN E2E ${name}`]);
   if (!/SUCCESS/.test(created)) throw new Error(`sc create ${name} failed: ${created}`);
   winServices.push(name);
   const started = sc(["start", name]);

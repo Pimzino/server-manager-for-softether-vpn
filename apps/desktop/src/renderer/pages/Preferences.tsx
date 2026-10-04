@@ -108,7 +108,7 @@ export default function Preferences() {
         <div className="sem-about">
           <img src={appIcon} alt="" width={56} height={56} />
           <div>
-            <div className="sem-about-name">SoftEther Manager</div>
+            <div className="sem-about-name">Server Manager for SoftEther VPN</div>
             <div className="sem-dim">{info.data ? `Version ${info.data.version}` : "…"}</div>
           </div>
         </div>

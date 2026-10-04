@@ -49,7 +49,7 @@ const AUTH_ERRORS = new Set([ERR_ACCESS_DENIED, ERR_HUB_NOT_FOUND, ERR_IP_ADDRES
 
 /** Idle sessions are closed after this long (SEM_NATIVE_IDLE_MS overrides, for tests). */
 const IDLE_MS = Number(process.env.SEM_NATIVE_IDLE_MS) || 60_000;
-const CLIENT_STR = "SoftEther Manager (native admin RPC)";
+const CLIENT_STR = "Server Manager for SoftEther VPN (native admin RPC)";
 const HTTP_VPN_TARGET = "/vpnsvc/vpn.cgi";
 const HTTP_VPN_TARGET2 = "/vpnsvc/connect.cgi";
 const HTTP_VPN_TARGET_POSTDATA = "VPNCONNECT";

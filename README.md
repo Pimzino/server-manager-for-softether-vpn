@@ -1,4 +1,4 @@
-# SoftEther Manager
+# Server Manager for SoftEther VPN
 
 A desktop app for macOS and Windows that manages **SoftEther VPN Servers**. It works like SoftEther's own Server
 Manager (`vpnsmgr`), but it runs natively on a Mac as well as on Windows. It keeps many servers open side by side and
@@ -74,10 +74,10 @@ Download the file for your platform from `apps/desktop/release/` (or from wherev
 
 | File | For |
 |---|---|
-| `SoftEther-Manager-1.0.0-mac-arm64.dmg` / `.zip` | Apple silicon (M1 and later) |
-| `SoftEther-Manager-1.0.0-mac-x64.dmg` / `.zip` | Intel Macs |
+| `Server-Manager-for-SoftEther-VPN-1.0.0-mac-arm64.dmg` / `.zip` | Apple silicon (M1 and later) |
+| `Server-Manager-for-SoftEther-VPN-1.0.0-mac-x64.dmg` / `.zip` | Intel Macs |
 
-Open the `.dmg` and drag **SoftEther Manager** to **Applications**.
+Open the `.dmg` and drag **Server Manager for SoftEther VPN** to **Applications**.
 
 The build is **ad-hoc signed, not signed with an Apple Developer ID, and not notarized**. Gatekeeper therefore
 blocks a copy that was downloaded. To open it the first time, do one of the following:
@@ -87,7 +87,7 @@ blocks a copy that was downloaded. To open it the first time, do one of the foll
 * Or remove the quarantine flag in Terminal:
 
   ```sh
-  xattr -dr com.apple.quarantine "/Applications/SoftEther Manager.app"
+  xattr -dr com.apple.quarantine "/Applications/Server Manager for SoftEther VPN.app"
   ```
 
 The first time the app connects to a server on your local network, macOS 15 and later asks for **Local Network**
@@ -97,23 +97,23 @@ access. Allow it.
 
 | File | What it is |
 |---|---|
-| `SoftEther-Manager-1.0.0-win-x64.msi` | Per-machine MSI for managed deployment (Intune, GPO, SCCM). x64; also runs on Windows on Arm under emulation. |
-| `SoftEther-Manager-1.0.0-win-x64-setup.exe` / `-win-arm64-setup.exe` | NSIS installer: per-user or all-users, choice of folder, Start-menu and desktop shortcuts |
-| `SoftEther-Manager-1.0.0-win-x64.zip` / `-win-arm64.zip` | Portable build, no installer |
+| `Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi` | Per-machine MSI for managed deployment (Intune, GPO, SCCM). x64; also runs on Windows on Arm under emulation. |
+| `Server-Manager-for-SoftEther-VPN-1.0.0-win-x64-setup.exe` / `-win-arm64-setup.exe` | NSIS installer: per-user or all-users, choice of folder, Start-menu and desktop shortcuts |
+| `Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.zip` / `-win-arm64.zip` | Portable build, no installer |
 
 The Windows files are **unsigned**, so SmartScreen warns on first run (*More info > Run anyway*).
 
 Silent MSI install, upgrade and uninstall (from an elevated prompt):
 
 ```bat
-msiexec /i SoftEther-Manager-1.0.0-win-x64.msi /qn
-msiexec /i SoftEther-Manager-1.0.0-win-x64.msi /qn DESKTOPSHORTCUT=0 INSTALLDIR="D:\Apps\SoftEther Manager\"
-msiexec /i SoftEther-Manager-1.1.0-win-x64.msi /qn        :: a newer MSI upgrades in place
-msiexec /x SoftEther-Manager-1.0.0-win-x64.msi /qn        :: uninstall
-msiexec /i SoftEther-Manager-1.0.0-win-x64.msi /qn /l*v install.log
+msiexec /i Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi /qn
+msiexec /i Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi /qn DESKTOPSHORTCUT=0 INSTALLDIR="D:\Apps\Server Manager for SoftEther VPN\"
+msiexec /i Server-Manager-for-SoftEther-VPN-1.1.0-win-x64.msi /qn        :: a newer MSI upgrades in place
+msiexec /x Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi /qn        :: uninstall
+msiexec /i Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi /qn /l*v install.log
 ```
 
-The MSI installs to `C:\Program Files\SoftEther Manager\` and keeps a fixed UpgradeCode, so every newer MSI
+The MSI installs to `C:\Program Files\Server Manager for SoftEther VPN\` and keeps a fixed UpgradeCode, so every newer MSI
 replaces the installed one. It has no wizard; for an interactive install, use the NSIS setup. Install either the
 MSI or the NSIS setup, not both: they are separate products. Both keep your data on uninstall.
 
@@ -121,8 +121,8 @@ MSI or the NSIS setup, not both: they are separate products. Both keep your data
 
 | | |
 |---|---|
-| macOS | `~/Library/Application Support/SoftEther Manager/` |
-| Windows | `%APPDATA%\SoftEther Manager\` |
+| macOS | `~/Library/Application Support/Server Manager for SoftEther VPN/` |
+| Windows | `%APPDATA%\Server Manager for SoftEther VPN\` |
 
 It holds `sem.db` (connections, settings, backups index), `files/` (client packages and built installers) and
 `master.key.sealed`.
