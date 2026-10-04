@@ -210,18 +210,43 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $Log = Join-Path $LogDir 'unconfigure.log'
 function Log([string]$m) { Add-Content -Path $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
 $vpncmd = Join-Path $Dir 'vpncmd.exe'
-$job = Start-Job -ArgumentList $vpncmd, $Dir -ScriptBlock {
-  param($vpncmd, $Dir)
+$Nic = ${ps(input.options.nicName)}
+$job = Start-Job -ArgumentList $vpncmd, $Dir, $Log, $Nic -ScriptBlock {
+  param($vpncmd, $Dir, $Log, $Nic)
+  function Log([string]$m) { Add-Content -Path $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
+  function Vc([string[]]$argv) {
+    $all = @('localhost', '/CLIENT', '/CMD') + $argv
+    & $vpncmd @all 2>&1 | Out-Null
+    Log ("vpncmd {0} -> {1}" -f $argv[0], $LASTEXITCODE)
+    return $LASTEXITCODE
+  }
+  # NicDelete (like NicCreate) is carried out by the UI helper on behalf of the client service
   $helper = Start-Process -FilePath (Join-Path $Dir 'vpnclient.exe') -ArgumentList '/uihelp' -PassThru -WindowStyle Hidden
   Start-Sleep -Seconds 3
   foreach ($n in @(${names})) {
-    & $vpncmd localhost /CLIENT /CMD AccountDisconnect $n | Out-Null
-    & $vpncmd localhost /CLIENT /CMD AccountDelete $n | Out-Null
+    Vc @('AccountDisconnect', $n) | Out-Null
+    # wait for the session to end: an adapter that is still in use cannot be removed
+    for ($i = 0; $i -lt 15; $i++) {
+      $st = & $vpncmd localhost /CLIENT /CMD AccountStatusGet $n 2>&1 | Out-String
+      if ($LASTEXITCODE -ne 0 -or $st -notmatch 'Session Status') { break }
+      Start-Sleep -Seconds 1
+    }
+    Vc @('AccountDelete', $n) | Out-Null
   }
-  & $vpncmd localhost /CLIENT /CMD NicDelete ${ps(input.options.nicName)} | Out-Null
+  $rc = 1
+  for ($i = 0; $i -lt 3 -and $rc -ne 0; $i++) {
+    $rc = Vc @('NicDelete', $Nic)
+    if ($rc -ne 0) { Start-Sleep -Seconds 3 }
+  }
   if ($helper -and -not $helper.HasExited) { Stop-Process -Id $helper.Id -Force }
 }
 if (-not (Wait-Job -Job $job -Timeout 120)) { Stop-Job -Job $job; Log 'unconfigure timed out' }
+# Fallback: if SoftEther did not remove its virtual adapter, remove the device through Windows
+$adapter = "VPN Client Adapter - $Nic"
+foreach ($dev in @(Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -eq $adapter })) {
+  Log "removing leftover device $($dev.InstanceId)"
+  & pnputil.exe /remove-device $dev.InstanceId 2>&1 | ForEach-Object { Log "pnputil: $_" }
+}
 # Runtime files created by the client service (not owned by the MSI)
 foreach ($f in @('vpn_client.config', 'lang.config', 'client-admin.txt')) { Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Dir $f) }
 foreach ($d in @('backup.vpn_client.config', 'client_log', 'packet_log', 'security_log')) { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $Dir $d) }
