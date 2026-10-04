@@ -5,7 +5,7 @@ import { spawn, execFileSync, type ChildProcess } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import net from "node:net";
 import path from "node:path";
-import { ARTIFACTS, CLIENT_DIR, CLIENT_PORT, E2E_DIR, OUTPUTS, RUN_DIR, SCREENSHOTS, SE_BUILD, SERVER_A, SERVER_B } from "./env.ts";
+import { ARTIFACTS, CLIENT_DIR, CLIENT_PORT, E2E_DIR, OUTPUTS, RUN_DIR, SCREENSHOTS, SE_BUILD, SERVER_A, SERVER_B, WIN, exe } from "./env.ts";
 import { seRpc, vpncmd, writeState } from "./helpers.ts";
 
 const procs: ChildProcess[] = [];
@@ -13,7 +13,7 @@ const PID_FILE = path.join(RUN_DIR, "..", ".se-desk-e2e.pids.json");
 
 function copyBins(dir: string, bins: string[]) {
   mkdirSync(dir, { recursive: true });
-  for (const f of [...bins, "hamcore.se2", "libcedar.dylib", "libmayaqua.dylib", "libcedar.so", "libmayaqua.so"]) {
+  for (const f of [...bins.map(exe), "hamcore.se2", "libcedar.dylib", "libmayaqua.dylib", "libcedar.so", "libmayaqua.so"]) {
     const src = path.join(SE_BUILD, f);
     if (existsSync(src)) copyFileSync(src, path.join(dir, f));
   }
@@ -25,6 +25,34 @@ function start(cmd: string, args: string[], cwd: string, logName: string) {
   procs.push(p);
   writeFileSync(PID_FILE, JSON.stringify(procs.map((x) => x.pid)));
   return p;
+}
+
+// ---- Windows: SoftEther's binaries run as Windows services (there is no foreground "execsvc" mode) ----
+const winServices: string[] = [];
+const WIN_SERVICES = { A: "SEME2E_SERVER_A", B: "SEME2E_SERVER_B", client: "SEME2E_CLIENT" };
+
+function sc(args: string[]) {
+  try { return execFileSync("sc.exe", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); } catch (e) { return String((e as { stdout?: string }).stdout ?? e); }
+}
+
+function removeWinService(name: string) {
+  sc(["stop", name]);
+  for (let i = 0; i < 20 && /RUNNING|STOP_PENDING/.test(sc(["query", name])); i++) execFileSync("powershell.exe", ["-NoProfile", "-Command", "Start-Sleep -Milliseconds 500"]);
+  sc(["delete", name]);
+}
+
+/** Register `<dir>/<binary>.exe /service` as an on-demand service and start it. */
+function startWinService(name: string, dir: string, binary: string) {
+  const created = sc(["create", name, "binPath=", `"${path.join(dir, `${binary}.exe`)}" /service`, "start=", "demand", "DisplayName=", `SoftEther Manager E2E ${name}`]);
+  if (!/SUCCESS/.test(created)) throw new Error(`sc create ${name} failed: ${created}`);
+  winServices.push(name);
+  const started = sc(["start", name]);
+  if (!/START_PENDING|RUNNING/.test(started)) throw new Error(`sc start ${name} failed: ${started}`);
+}
+
+function stopEverything(sig: NodeJS.Signals) {
+  if (WIN) { for (const n of winServices.splice(0)) removeWinService(n); return; }
+  for (const p of procs) killGroup(p.pid, sig);
 }
 
 async function waitFor(fn: () => Promise<boolean>, what: string, timeoutMs = 30_000) {
@@ -67,15 +95,16 @@ export default async function globalSetup() {
   try {
     return await setup();
   } catch (e) {
-    for (const p of procs) killGroup(p.pid, "SIGKILL");
+    stopEverything("SIGKILL");
     throw e;
   }
 }
 
 async function setup() {
-  if (!existsSync(path.join(SE_BUILD, "vpnserver"))) throw new Error(`SoftEther binaries not found in ${SE_BUILD}`);
+  if (!existsSync(path.join(SE_BUILD, exe("vpnserver")))) throw new Error(`SoftEther binaries not found in ${SE_BUILD}`);
   // Leftovers of an interrupted earlier run of this suite
-  if (existsSync(PID_FILE)) {
+  if (WIN) for (const n of Object.values(WIN_SERVICES)) removeWinService(n);
+  if (!WIN && existsSync(PID_FILE)) {
     for (const pid of JSON.parse(readFileSync(PID_FILE, "utf8")) as number[]) killGroup(pid, "SIGKILL");
     await new Promise((r) => setTimeout(r, 1500));
   }
@@ -96,7 +125,8 @@ async function setup() {
   for (const s of [SERVER_A, SERVER_B]) {
     copyBins(s.dir, ["vpnserver"]);
     writeFileSync(path.join(s.dir, "vpn_server.config"), serverConfig(s.port, s === SERVER_A));
-    start("./vpnserver", ["execsvc"], s.dir, `server-${s.key}`);
+    if (WIN) startWinService(WIN_SERVICES[s.key as "A" | "B"], s.dir, "vpnserver");
+    else start("./vpnserver", ["execsvc"], s.dir, `server-${s.key}`);
   }
   // B: JSON-RPC. A: its JSON-RPC API is disabled, so it is checked with vpncmd (native admin protocol).
   await waitFor(async () => !!(await seRpc(SERVER_B.port, "", "Test", { IntValue_u32: 1 })), "server B JSON-RPC");
@@ -109,12 +139,14 @@ async function setup() {
   if (jsonRpcAnswered) throw new Error("Server A still answers JSON-RPC although DisableJsonRpcWebApi is true");
 
   // 3. SoftEther VPN Client (management port 9931 is fixed) for .vpn import checks.
-  start("./vpnclient", ["execsvc"], CLIENT_DIR, "vpnclient");
+  if (WIN) startWinService(WIN_SERVICES.client, CLIENT_DIR, "vpnclient");
+  else start("./vpnclient", ["execsvc"], CLIENT_DIR, "vpnclient");
   await waitFor(async () => await portInUse(CLIENT_PORT), "vpnclient on 9931");
 
   writeState({ bPassword: SERVER_B.password, servers: {} });
   writeFileSync(PID_FILE, JSON.stringify(procs.map((p) => p.pid)));
   return async () => {
+    if (WIN) { stopEverything("SIGTERM"); return; }
     for (const p of procs) killGroup(p.pid, "SIGTERM");
     await new Promise((r) => setTimeout(r, 1500));
     for (const p of procs) killGroup(p.pid, "SIGKILL");

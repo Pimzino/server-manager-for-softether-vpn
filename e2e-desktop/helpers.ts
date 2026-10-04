@@ -7,7 +7,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import { Agent, request } from "undici";
 import { _electron as electron, expect, type ElectronApplication, type Locator, type Page, type TestInfo } from "@playwright/test";
-import { BUILD_DIR, CLIENT_DIR, DATA_DIR, ROOT, RUN_DIR, SCREENSHOTS, STATE_FILE } from "./env.ts";
+import { BUILD_DIR, CLIENT_DIR, DATA_DIR, ROOT, RUN_DIR, SCREENSHOTS, STATE_FILE, WIN } from "./env.ts";
 
 const run = promisify(execFile);
 const insecure = new Agent({ connect: { rejectUnauthorized: false } });
@@ -36,7 +36,7 @@ const libEnv = { ...process.env, DYLD_LIBRARY_PATH: ".", LD_LIBRARY_PATH: "." };
 /** Runs vpncmd in CLIENT_DIR with stdin closed (a password prompt fails fast instead of hanging). */
 function runVpncmd(args: string[]): Promise<{ code: number; out: string }> {
   return new Promise((resolve) => {
-    const p = spawn("./vpncmd", args, { cwd: CLIENT_DIR, env: libEnv, stdio: ["ignore", "pipe", "pipe"] });
+    const p = spawn(WIN ? path.join(CLIENT_DIR, "vpncmd.exe") : "./vpncmd", args, { cwd: CLIENT_DIR, env: libEnv, stdio: ["ignore", "pipe", "pipe"] });
     let out = "", err = "";
     p.stdout.on("data", (d) => { out += String(d); });
     p.stderr.on("data", (d) => { err += String(d); });
@@ -91,6 +91,50 @@ export function csvMap(out: string): Record<string, string> {
 export async function sh(cmd: string, args: string[], cwd?: string) {
   const r = await run(cmd, args, { cwd, maxBuffer: 64 * 1024 * 1024 });
   return r.stdout;
+}
+
+export interface MsiInfo { tables: string[]; properties: Record<string, string>; files: string[]; summary: string }
+
+/**
+ * Read an MSI's tables, Property table and file names. Linux/macOS: msitools (msiinfo, msiextract).
+ * Windows: the Windows Installer COM object, since msitools is not available there.
+ */
+export async function inspectMsi(msi: string): Promise<MsiInfo> {
+  if (!WIN) {
+    const tables = (await sh("msiinfo", ["tables", msi])).split(/\s+/).filter(Boolean);
+    const summary = await sh("msiinfo", ["suminfo", msi]);
+    const props = await sh("msiinfo", ["export", msi, "Property"]);
+    const properties = Object.fromEntries(props.split(/\r?\n/).slice(3).filter((l) => l.includes("\t")).map((l) => l.split("\t") as [string, string]));
+    const files = (await sh("msiextract", ["--list", msi])).split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((l) => l.split(/[\\/]/).pop()!);
+    return { tables, properties, files, summary };
+  }
+  const script = path.join(RUN_DIR, "inspect-msi.ps1");
+  writeFileSync(script, `param([string]$Path)
+$ErrorActionPreference = 'Stop'
+$i = New-Object -ComObject WindowsInstaller.Installer
+$db = $i.GetType().InvokeMember('OpenDatabase', 'InvokeMethod', $null, $i, @($Path, 0))
+function Rows([string]$sql, [int]$cols) {
+  $v = $db.GetType().InvokeMember('OpenView', 'InvokeMethod', $null, $db, @($sql))
+  $v.GetType().InvokeMember('Execute', 'InvokeMethod', $null, $v, $null) | Out-Null
+  $out = @()
+  while ($true) {
+    $r = $v.GetType().InvokeMember('Fetch', 'InvokeMethod', $null, $v, $null)
+    if (-not $r) { break }
+    $row = @(); for ($c = 1; $c -le $cols; $c++) { $row += [string]$r.GetType().InvokeMember('StringData', 'GetProperty', $null, $r, @($c)) }
+    $out += ,$row
+  }
+  return ,$out
+}
+$props = @{}; foreach ($r in (Rows 'SELECT \`Property\`, \`Value\` FROM \`Property\`' 2)) { $props[$r[0]] = $r[1] }
+[pscustomobject]@{
+  tables = @((Rows 'SELECT \`Name\` FROM \`_Tables\`' 1) | ForEach-Object { $_[0] })
+  properties = $props
+  files = @((Rows 'SELECT \`FileName\` FROM \`File\`' 1) | ForEach-Object { ($_[0] -split '\\|')[-1] })
+} | ConvertTo-Json -Depth 4 -Compress
+`);
+  const out = await sh("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script, "-Path", msi]);
+  const j = JSON.parse(out) as { tables: string[]; properties: Record<string, string>; files: string[] };
+  return { ...j, summary: `Subject: ${j.properties.ProductName} (read with the Windows Installer COM API)` };
 }
 
 export function sha256(file: string) {

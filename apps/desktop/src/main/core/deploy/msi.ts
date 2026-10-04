@@ -261,7 +261,8 @@ exit 0
 /**
  * `flavor` "wix3" (candle/light) differs from "wixl" only where wixl lacks support, which the wixl
  * build patches afterwards with msibuild: install-time credential properties are declared
- * Secure="yes" (SecureCustomProperties) and the pending-credential registry values carry
+ * Secure="yes" (SecureCustomProperties), the password Hidden="yes" (candle refuses an authored
+ * MsiHiddenProperties, CNDL0070) and the pending-credential registry values carry
  * <Permission> elements (LockPermissions: SYSTEM + Administrators). The product code is fixed in
  * the source (`productCode`) so no MSI table reader is needed afterwards.
  */
@@ -319,9 +320,10 @@ export function renderWxs(input: MsiBuildInput, upgradeCode: string, flavor: "wi
 
     <Property Id="ARPNOMODIFY" Value="1"/>
     <Property Id="ARPNOREPAIR" Value="1"/>${arp}${iconXml}
-    <Property Id="MsiHiddenProperties" Value="VPNPASSWORD"/>${wix3 ? `
+${wix3 ? `
     <Property Id="VPNUSERNAME" Secure="yes"/>
-    <Property Id="VPNPASSWORD" Secure="yes"/>` : ""}
+    <Property Id="VPNPASSWORD" Secure="yes" Hidden="yes"/>` : `
+    <Property Id="MsiHiddenProperties" Value="VPNPASSWORD"/>`}
 
     <Directory Id="TARGETDIR" Name="SourceDir">
       <Directory Id="${pf}">

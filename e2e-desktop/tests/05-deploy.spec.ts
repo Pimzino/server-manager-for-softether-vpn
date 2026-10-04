@@ -9,7 +9,7 @@ import { test, expect, type Page } from "@playwright/test";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
-  buildZip, closeApp, csv, csvMap, launchApp, openSection, openServer, route, serverId, sh, sha256, sheet, shot, stubOpenDialog,
+  buildZip, closeApp, csv, csvMap, inspectMsi, launchApp, openSection, openServer, route, serverId, sh, sha256, sheet, shot, stubOpenDialog,
   stubSaveDialog, vpncmdClient, type App,
 } from "../helpers.ts";
 import { CLIENT_DIR, OUTPUTS, RUN_DIR, SE_BUILD, SERVER_A } from "../env.ts";
@@ -135,19 +135,15 @@ test("MSI built from the placeholder package: msiinfo tables and msiextract file
   await shot(page, "msi-built", ti);
   await s.getByRole("button", { name: "Done" }).click();
   expect(readFileSync(msi).subarray(0, 8).toString("hex")).toBe("d0cf11e0a1b11ae1"); // OLE compound file
-  const tables = (await sh("msiinfo", ["tables", msi])).split(/\s+/).filter(Boolean);
-  writeFileSync(path.join(OUTPUTS, "HQ-bob.msi.tables.txt"), tables.join("\n"));
-  for (const t of ["File", "Component", "Directory", "Feature", "CustomAction", "InstallExecuteSequence", "Property"]) expect(tables).toContain(t);
-  const summary = await sh("msiinfo", ["suminfo", msi]);
-  const props = await sh("msiinfo", ["export", msi, "Property"]);
-  writeFileSync(path.join(OUTPUTS, "HQ-bob.msi.suminfo.txt"), `${summary}\n\n${props}`);
-  expect(props).toMatch(/ProductName\tHQ VPN/);
-  expect(props).toMatch(/ProductVersion\t1\.0\.\d+/);
-  const list = (await sh("msiextract", ["--list", msi])).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  writeFileSync(path.join(OUTPUTS, "HQ-bob.msi.files.txt"), list.join("\n"));
-  const names = list.map((l) => l.split(/[\\/]/).pop()!);
-  for (const f of ["vpnclient.exe", "vpncmd.exe", "hamcore.se2", "configure.ps1"]) expect(names, list.join("\n")).toContain(f);
-  expect(names.some((n) => n.endsWith(".vpn")), list.join("\n")).toBe(true);
+  const info = await inspectMsi(msi);
+  writeFileSync(path.join(OUTPUTS, "HQ-bob.msi.tables.txt"), info.tables.join("\n"));
+  for (const t of ["File", "Component", "Directory", "Feature", "CustomAction", "InstallExecuteSequence", "Property"]) expect(info.tables).toContain(t);
+  writeFileSync(path.join(OUTPUTS, "HQ-bob.msi.suminfo.txt"), `${info.summary}\n\n${Object.entries(info.properties).map(([k, v]) => `${k}\t${v}`).join("\n")}`);
+  expect(info.properties.ProductName).toBe("HQ VPN");
+  expect(info.properties.ProductVersion).toMatch(/^1\.0\.\d+$/);
+  writeFileSync(path.join(OUTPUTS, "HQ-bob.msi.files.txt"), info.files.join("\n"));
+  for (const f of ["vpnclient.exe", "vpncmd.exe", "hamcore.se2", "configure.ps1"]) expect(info.files, info.files.join("\n")).toContain(f);
+  expect(info.files.some((n) => n.endsWith(".vpn")), info.files.join("\n")).toBe(true);
   // The MSI is listed on the MSI Installers page
   await page.getByTestId("sidebar-deploy").click();
   await openSection(page, "installers");

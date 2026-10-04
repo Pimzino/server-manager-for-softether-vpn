@@ -103,6 +103,55 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------------------------
+  e2e-desktop-windows:
+    name: Desktop E2E (windows-2025)
+    needs: checks
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - name: Official SoftEther VPN Server and Client for Windows (checksums verified)
+        shell: pwsh
+        run: |
+          $ProgressPreference = "SilentlyContinue"
+          foreach ($a in @(@($env:SE_SERVER_X64, $env:SE_SERVER_X64_SHA256), @($env:SE_CLIENT_X64, $env:SE_CLIENT_X64_SHA256))) {
+            $f = Join-Path $env:RUNNER_TEMP $a[0]
+            Invoke-WebRequest "$env:SE_RELEASE_URL/$($a[0])" -OutFile $f
+            $h = (Get-FileHash $f -Algorithm SHA256).Hash.ToLower()
+            if ($h -ne $a[1]) { throw "checksum mismatch for $($a[0]): $h" }
+            node tools/ci/extract-sfx.ts $f se-build
+          }
+          Get-ChildItem se-build | Format-Table Name, Length
+      - name: Run desktop E2E suite (SoftEther as Windows services, MSI built with WiX Toolset)
+        shell: pwsh
+        env:
+          SE_BUILD_DIR: ${{ github.workspace }}\se-build
+          E2E_DESK_RUN_DIR: ${{ runner.temp }}\se-desk-e2e
+        run: pnpm exec playwright test -c e2e-desktop/playwright.config.ts
+      - name: Summary
+        if: always()
+        shell: pwsh
+        run: |
+          node e2e-desktop/summarize.ts
+          if (Test-Path e2e-desktop/artifacts/SUMMARY.md) { Get-Content e2e-desktop/artifacts/SUMMARY.md | Add-Content $env:GITHUB_STEP_SUMMARY }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: e2e-desktop-windows-2025
+          path: |
+            e2e-desktop/artifacts/SUMMARY.md
+            e2e-desktop/artifacts/results.json
+            e2e-desktop/artifacts/report
+            e2e-desktop/artifacts/screenshots
+            e2e-desktop/artifacts/test-results
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
   client-packages:
     name: Build client packages (official SoftEther client)
     needs: checks
