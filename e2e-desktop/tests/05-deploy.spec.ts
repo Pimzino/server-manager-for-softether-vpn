@@ -43,8 +43,12 @@ async function buildAndSave(user: string | null, kind: "vpn" | "msi", dest: stri
   await expect(s).toBeVisible({ timeout: 120_000 });
   rmSync(dest, { force: true });
   await stubSaveDialog(a.app, dest);
-  await s.getByTestId("build-result-download").click();
-  await expect(s.getByTestId("build-result-saved")).toContainText(path.basename(dest), { timeout: 30_000 });
+  // A click that lands while the sheet is still sliding in can be lost: click again until the save is confirmed
+  const saved = s.getByTestId("build-result-saved");
+  await expect(async () => {
+    if (!(await saved.isVisible())) await s.getByTestId("build-result-download").click({ timeout: 5_000 });
+    await expect(saved).toContainText(path.basename(dest), { timeout: 5_000 });
+  }).toPass({ timeout: 45_000 });
   expect(existsSync(dest)).toBe(true);
   return s;
 }
