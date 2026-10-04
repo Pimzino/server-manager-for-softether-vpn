@@ -139,7 +139,8 @@ export interface App { app: ElectronApplication; page: Page; log: string[] }
 export async function launchApp(): Promise<App> {
   if (!existsSync(path.join(BUILD_DIR, "main/main.mjs"))) throw new Error("App not built: run node e2e-desktop/build.mjs");
   const app = await electron.launch({
-    args: [BUILD_DIR],
+    // GitHub's Linux runners restrict unprivileged user namespaces, so Chromium's sandbox cannot start there.
+    args: [BUILD_DIR, ...(process.platform === "linux" && process.env.CI ? ["--no-sandbox"] : [])],
     cwd: ROOT,
     env: {
       ...process.env,
