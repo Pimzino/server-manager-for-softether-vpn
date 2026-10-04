@@ -4,6 +4,8 @@
 //   node scripts/dist.mjs --mac           macOS only           (pnpm run dist:mac)
 //   node scripts/dist.mjs --win           Windows only + MSI   (pnpm run dist:win)
 //   options: --no-build (package the existing dist/), --no-msi, --no-verify, --no-launch (skip starting the packaged app),
+//            --no-cross-launch (start only the build for this machine's CPU: Rosetta inside CI virtual machines
+//            does not bring an x64 Electron up),
 //            --reuse (skip electron-builder, re-use the previous output in the staging dir),
 //            --mac-arch=arm64,x64   --win-arch=x64,arm64
 //   env:     SEM_DIST_STAGING  staging directory on an APFS/HFS+ volume (default: $TMPDIR/sem-desktop-dist)
@@ -44,6 +46,7 @@ const doBuild = !flag("--no-build");
 const doMsi = doWin && !flag("--no-msi");
 const doVerify = !flag("--no-verify");
 const doLaunch = !flag("--no-launch");
+const doCrossLaunch = !flag("--no-cross-launch");
 // --reuse: skip electron-builder and re-use its previous output in the staging dir (for re-running the MSI/verification)
 const reuse = flag("--reuse");
 const macArchs = opt("mac-arch", ["arm64", "x64"]);
@@ -344,7 +347,9 @@ if (doMac) {
       });
       if (doLaunch) {
         const rosetta = arch === "arm64" || process.arch === "x64" || sh("arch", ["-x86_64", "/usr/bin/true"]).code === 0;
-        if (!rosetta) {
+        if (arch !== process.arch && !doCrossLaunch) {
+          checks.notes.push(`[${arch}] launch not tested: --no-cross-launch (this machine is ${process.arch})`);
+        } else if (!rosetta) {
           checks.notes.push(`[${arch}] launch not tested: Rosetta 2 is not installed on this Mac`);
         } else {
           await checks.run(`[${arch}] launches from the unzipped copy via LaunchServices (open), window renders`, async () =>

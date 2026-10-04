@@ -69,7 +69,9 @@ jobs:
           CSC_FOR_PULL_REQUEST: true
         run: |
           if [ -z "$WIN_CSC_LINK" ]; then unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; fi
-          pnpm --filter @sem/desktop run dist
+          # --no-cross-launch: the x64 macOS build is verified but not started (Rosetta in the runner VM never
+          # brings Electron up); the arm64 build is started and screenshotted
+          pnpm --filter @sem/desktop run dist --no-cross-launch
           cp apps/desktop/build/codesign/SoftEther-Manager-codesign.cer apps/desktop/release/
       - name: Build report
         if: always()
