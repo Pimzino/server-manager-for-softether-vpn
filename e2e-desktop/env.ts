@@ -4,6 +4,9 @@ import path from "node:path";
 import os from "node:os";
 
 export const ROOT = path.resolve(import.meta.dirname, "..");
+export const WIN = process.platform === "win32";
+/** Executable file name on this platform (SoftEther's Windows binaries end in .exe). */
+export const exe = (name: string) => (WIN ? `${name}.exe` : name);
 export const E2E_DIR = path.join(ROOT, "e2e-desktop");
 export const BUILD_DIR = path.join(E2E_DIR, ".build");
 export const ARTIFACTS = path.join(E2E_DIR, "artifacts");
