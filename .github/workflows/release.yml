@@ -64,6 +64,9 @@ jobs:
         env:
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # electron-builder skips all signing on pull requests by default, including the ad-hoc macOS signature
+          # the app needs to start at all. Pull requests from forks get no secrets, so this exposes nothing.
+          CSC_FOR_PULL_REQUEST: true
         run: |
           if [ -z "$WIN_CSC_LINK" ]; then unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; fi
           pnpm --filter @sem/desktop run dist
