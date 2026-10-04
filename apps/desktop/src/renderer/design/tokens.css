@@ -1,5 +1,5 @@
 /*
- * SoftEther Manager design tokens. Every colour, size and duration used by the renderer comes from here.
+ * Server Manager for SoftEther VPN design tokens. Every colour, size and duration used by the renderer comes from here.
  * Light values on :root, dark values under [data-mantine-color-scheme="dark"] (Mantine sets the attribute
  * on <html>, following the OS unless the user overrides it in Preferences).
  * Documented in docs/desktop-design.md, "Tokens".

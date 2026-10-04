@@ -2,7 +2,7 @@
 //
 //   node scripts/smoke-packaged.mjs [--arch=arm64|x64] [--port=16201]      (pnpm run smoke:packaged)
 //
-// 1. Extracts release/SoftEther-Manager-<v>-mac-<arch>.zip with ditto (the shipped artifact, not the staging copy).
+// 1. Extracts release/Server-Manager-for-SoftEther-VPN-<v>-mac-<arch>.zip with ditto (the shipped artifact, not the staging copy).
 // 2. Starts a throwaway vpnserver from ~/se-build/src/build (SE_BUILD_DIR) in its own run dir (~/se-desk-release) and
 //    process group, listening on --port only, and sets an administrator password over JSON-RPC.
 // 3. Starts the app like a user would (`open -n`), on an empty data directory, with a Chromium remote-debugging port.
@@ -33,7 +33,7 @@ const PASSWORD = "Packaged-Smoke-Pw-1";
 const SE_BUILD = process.env.SE_BUILD_DIR ?? path.join(os.homedir(), "se-build/src/build");
 const RUN_DIR = path.join(os.homedir(), "se-desk-release");
 const OUT = path.join(root, "release/verification/packaged-smoke");
-const zip = path.join(root, `release/SoftEther-Manager-${pkg.version}-mac-${arch}.zip`);
+const zip = path.join(root, `release/Server-Manager-for-SoftEther-VPN-${pkg.version}-mac-${arch}.zip`);
 
 const sh = (cmd, args) => { const r = spawnSync(cmd, args, { encoding: "utf8" }); return { code: r.status, out: `${r.stdout ?? ""}${r.stderr ?? ""}`.trim() }; };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

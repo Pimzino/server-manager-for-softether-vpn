@@ -13,7 +13,7 @@ import { resetAgents } from "./softether/client.ts";
 import { closeNativeSessions } from "./softether/native.ts";
 import { registerIpc } from "./ipc.ts";
 
-const APP_NAME = "SoftEther Manager";
+const APP_NAME = "Server Manager for SoftEther VPN";
 const DOCS_URL = "https://www.softether.org/4-docs";
 const isMac = process.platform === "darwin";
 const isWin = process.platform === "win32";

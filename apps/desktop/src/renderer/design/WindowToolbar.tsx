@@ -52,7 +52,7 @@ export function WindowToolbar({ sidebarHidden }: { sidebarHidden: boolean }) {
   const { title, subtitle } = scopeTitle(scope);
   const hasSections = scope.sections.length > 0;
 
-  const docTitle = [scope.section?.label, title].filter(Boolean).join(" – ") || (scope.kind === "preferences" ? "Preferences" : "SoftEther Manager");
+  const docTitle = [scope.section?.label, title].filter(Boolean).join(" – ") || (scope.kind === "preferences" ? "Preferences" : "Server Manager for SoftEther VPN");
   useEffect(() => { document.title = docTitle; }, [docTitle]);
   const status = scope.kind === "server" && scope.server ? serverStatus(scope.server) : null;
   const hubInfo = scope.kind === "hub" ? scope.server?.state?.hubs?.HubList?.find((h) => h.HubName_str === scope.hub) : undefined;

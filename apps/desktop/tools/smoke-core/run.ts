@@ -189,7 +189,7 @@ async function main() {
       const w = BrowserWindow.getAllWindows()[0];
       return { name: a.getName(), size: w.getSize(), min: w.getMinimumSize(), title: w.getTitle(), userData: a.getPath("userData") };
     });
-    assert(win.name === "SoftEther Manager", `app name ${win.name}`);
+    assert(win.name === "Server Manager for SoftEther VPN", `app name ${win.name}`);
     assert(win.min[0] === 1024 && win.min[1] === 680, `min size ${win.min}`);
     assert(win.size[0] === 1360 && win.size[1] === 880, `size ${win.size}`);
     assert(info.dataDir === DATA && win.userData === DATA, `dataDir ${info.dataDir} userData ${win.userData}`);
