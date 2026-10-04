@@ -100,7 +100,7 @@ export function describeError(error: unknown): { title: string; message: string;
   if (error instanceof ApiError) {
     const code = error.softEtherCode;
     if (error.locked) return { title: "Password required", message: "This connection has no saved password. Enter it to continue.", locked: true };
-    if (code !== undefined) return { title: CODE_TITLES[code] ?? "The server refused the request", message: error.message, code, unsupported: code === 33 || code === 147 };
+    if (code !== undefined) return { title: CODE_TITLES[code] ?? "The server refused the request", message: error.message, code, unsupported: code === 33 || code === 84 || code === 147 };
     if (error.kind) return { title: KIND_TITLES[error.kind] ?? "Connection failed", message: error.message, kind: error.kind };
     if (error.status === 404) return { title: "Not found", message: error.message };
     return { title: "Request failed", message: error.message };

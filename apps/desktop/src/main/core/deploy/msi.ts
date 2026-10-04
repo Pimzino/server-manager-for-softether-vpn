@@ -21,6 +21,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { peVersion } from "./payload.ts";
 
 const run = promisify(execFile);
 
@@ -127,6 +128,9 @@ $job = Start-Job -ArgumentList $Dir, $Accounts, $Nic, $Connect, $DeleteProfiles,
   param($Dir, $Accounts, $Nic, $Connect, $DeleteProfiles, $CredKey, $Log)
   function Log([string]$m) { Add-Content -Path $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
   $vpncmd = Join-Path $Dir 'vpncmd.exe'
+  foreach ($f in @('vpncmd.exe', 'vpnclient.exe', 'hamcore.se2')) {
+    if (-not (Test-Path (Join-Path $Dir $f))) { Log "$f is missing from $Dir"; return 2 }
+  }
   function Vc([string[]]$argv, [switch]$Quiet) {
     $all = @('localhost', '/CLIENT', '/CMD') + $argv
     $out = & $vpncmd @all 2>&1 | Out-String
@@ -178,7 +182,10 @@ ${o.clientConfigPassword ? "    $cfgPw = (Get-Content -Raw -Path (Join-Path $Dir
   }
 }
 if (Wait-Job -Job $job -Timeout $TimeoutSec) {
-  $rc = Receive-Job -Job $job | Select-Object -Last 1
+  $jobErrors = @()
+  $rc = Receive-Job -Job $job -ErrorAction SilentlyContinue -ErrorVariable jobErrors | Select-Object -Last 1
+  foreach ($e in $jobErrors) { Log "error: $e" }
+  if ($jobErrors.Count -gt 0 -and -not ($rc -is [int])) { $rc = 1 }
   Log "configure finished rc=$rc"
   if ($rc -is [int] -and $rc -ne 0) { exit $rc }
   exit 0
@@ -203,18 +210,43 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $Log = Join-Path $LogDir 'unconfigure.log'
 function Log([string]$m) { Add-Content -Path $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
 $vpncmd = Join-Path $Dir 'vpncmd.exe'
-$job = Start-Job -ArgumentList $vpncmd, $Dir -ScriptBlock {
-  param($vpncmd, $Dir)
+$Nic = ${ps(input.options.nicName)}
+$job = Start-Job -ArgumentList $vpncmd, $Dir, $Log, $Nic -ScriptBlock {
+  param($vpncmd, $Dir, $Log, $Nic)
+  function Log([string]$m) { Add-Content -Path $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
+  function Vc([string[]]$argv) {
+    $all = @('localhost', '/CLIENT', '/CMD') + $argv
+    & $vpncmd @all 2>&1 | Out-Null
+    Log ("vpncmd {0} -> {1}" -f $argv[0], $LASTEXITCODE)
+    return $LASTEXITCODE
+  }
+  # NicDelete (like NicCreate) is carried out by the UI helper on behalf of the client service
   $helper = Start-Process -FilePath (Join-Path $Dir 'vpnclient.exe') -ArgumentList '/uihelp' -PassThru -WindowStyle Hidden
   Start-Sleep -Seconds 3
   foreach ($n in @(${names})) {
-    & $vpncmd localhost /CLIENT /CMD AccountDisconnect $n | Out-Null
-    & $vpncmd localhost /CLIENT /CMD AccountDelete $n | Out-Null
+    Vc @('AccountDisconnect', $n) | Out-Null
+    # wait for the session to end: an adapter that is still in use cannot be removed
+    for ($i = 0; $i -lt 15; $i++) {
+      $st = & $vpncmd localhost /CLIENT /CMD AccountStatusGet $n 2>&1 | Out-String
+      if ($LASTEXITCODE -ne 0 -or $st -notmatch 'Session Status') { break }
+      Start-Sleep -Seconds 1
+    }
+    Vc @('AccountDelete', $n) | Out-Null
   }
-  & $vpncmd localhost /CLIENT /CMD NicDelete ${ps(input.options.nicName)} | Out-Null
+  $rc = 1
+  for ($i = 0; $i -lt 3 -and $rc -ne 0; $i++) {
+    $rc = Vc @('NicDelete', $Nic)
+    if ($rc -ne 0) { Start-Sleep -Seconds 3 }
+  }
   if ($helper -and -not $helper.HasExited) { Stop-Process -Id $helper.Id -Force }
 }
 if (-not (Wait-Job -Job $job -Timeout 120)) { Stop-Job -Job $job; Log 'unconfigure timed out' }
+# Fallback: if SoftEther did not remove its virtual adapter, remove the device through Windows
+$adapter = "VPN Client Adapter - $Nic"
+foreach ($dev in @(Get-PnpDevice -Class Net -ErrorAction SilentlyContinue | Where-Object { $_.FriendlyName -eq $adapter })) {
+  Log "removing leftover device $($dev.InstanceId)"
+  & pnputil.exe /remove-device $dev.InstanceId 2>&1 | ForEach-Object { Log "pnputil: $_" }
+}
 # Runtime files created by the client service (not owned by the MSI)
 foreach ($f in @('vpn_client.config', 'lang.config', 'client-admin.txt')) { Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $Dir $f) }
 foreach ($d in @('backup.vpn_client.config', 'client_log', 'packet_log', 'security_log')) { Remove-Item -Recurse -Force -ErrorAction SilentlyContinue (Join-Path $Dir $d) }
@@ -539,6 +571,16 @@ export async function buildMsi(input: MsiBuildInput, outDir: string, outName: st
       await run(tc.msibuild!, [msi, "-q",
         "UPDATE `Property` SET `Value` = 'WIX_DOWNGRADE_DETECTED;WIX_UPGRADE_DETECTED;VPNUSERNAME;VPNPASSWORD' WHERE `Property` = 'SecureCustomProperties'"], opts);
       logLines.push("$ msibuild product.msi -q UPDATE Property SecureCustomProperties += VPNUSERNAME;VPNPASSWORD");
+      // wixl leaves File.Version empty. Windows Installer then treats the already-installed executables as
+      // "higher versioned" during a major upgrade, skips them, and RemoveExistingProducts deletes them with the
+      // old product: the upgrade ends with no client files. Record the real PE file versions.
+      for (const f of input.payload) {
+        const version = peVersion(await readFile(f.path));
+        if (!version) continue;
+        const id = f.name.replace(/[^A-Za-z0-9_.]/g, "_");
+        await run(tc.msibuild!, [msi, "-q", `UPDATE \`File\` SET \`Version\` = '${version}', \`Language\` = '0' WHERE \`File\` = '${id}'`], opts);
+        logLines.push(`$ msibuild product.msi -q UPDATE File SET Version = ${version} WHERE File = ${id}`);
+      }
       if (input.options.credentialMode === "install-time") {
         // The pending-credential key would inherit HKLM\SOFTWARE's ACL (Users: read). LockPermissions
         // replaces it with SYSTEM + Administrators only, before the value is written.

@@ -1,0 +1,167 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Official SoftEther VPN Developer Edition release used by the Windows install test
+  # (github.com/SoftEtherVPN/SoftEtherVPN, release 5.2.5188; SHA-256 from the release's asset digests).
+  SE_RELEASE_URL: https://github.com/SoftEtherVPN/SoftEtherVPN/releases/download/5.2.5188
+  SE_CLIENT_X64: softether-vpnclient-5.02.5187.x64.exe
+  SE_CLIENT_X64_SHA256: ea8312c173c5d848964c6cce7a34f4e43fb31000a4b88d7fb6866da977e56891
+  SE_SERVER_X64: softether-vpnserver_vpnbridge-5.02.5187.x64.exe
+  SE_SERVER_X64_SHA256: df7f40d9fbdac5496ac214b5543f6e4742df55b69e1db848a1ce6c3cf36bbf81
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  checks:
+    name: Type-check and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - name: Enable pnpm (version from package.json "packageManager")
+        run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - name: Build web edition
+        run: pnpm run build
+      - name: Build desktop app
+        run: pnpm --filter @sem/desktop run build
+
+  # ---------------------------------------------------------------------------------------------
+  e2e-desktop:
+    name: Desktop E2E (${{ matrix.os }})
+    needs: checks
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-26]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - name: System packages (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends build-essential cmake pkg-config libssl-dev libsodium-dev \
+            libreadline-dev libncurses-dev zlib1g-dev wixl msitools xvfb
+      - name: System packages (macOS)
+        if: runner.os == 'macOS'
+        run: brew install msitools libsodium readline ncurses openssl@3 pkg-config
+      - name: Cache SoftEther build
+        id: se-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: se-build
+          key: softether-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/build-softether.sh') }}
+      - name: Build SoftEther VPN from source (pinned release)
+        if: steps.se-cache.outputs.cache-hit != 'true'
+        run: bash tools/ci/build-softether.sh "$PWD/se-build"
+      - run: pnpm install --frozen-lockfile
+      - name: Run desktop E2E suite
+        env:
+          SE_BUILD_DIR: ${{ github.workspace }}/se-build
+          E2E_DESK_RUN_DIR: ${{ runner.temp }}/se-desk-e2e
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" pnpm run e2e:desktop
+          else
+            pnpm run e2e:desktop
+          fi
+      - name: Summary
+        if: always()
+        run: cat e2e-desktop/artifacts/SUMMARY.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: e2e-desktop-${{ matrix.os }}
+          path: |
+            e2e-desktop/artifacts/SUMMARY.md
+            e2e-desktop/artifacts/results.json
+            e2e-desktop/artifacts/report
+            e2e-desktop/artifacts/screenshots
+            e2e-desktop/artifacts/test-results
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  client-packages:
+    name: Build client packages (official SoftEther client)
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends wixl msitools
+      - run: pnpm install --frozen-lockfile
+      - name: Download the official SoftEther VPN Client (checksum verified)
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/$SE_CLIENT_X64" "$SE_RELEASE_URL/$SE_CLIENT_X64"
+          echo "$SE_CLIENT_X64_SHA256  $RUNNER_TEMP/$SE_CLIENT_X64" | sha256sum -c -
+      - name: Build branded MSI and setup.exe
+        run: node tools/ci/build-client-packages.ts "$RUNNER_TEMP/$SE_CLIENT_X64" "$PWD/client-packages"
+      - name: Inspect
+        run: |
+          ls -l client-packages
+          cat client-packages/manifest.json
+          msiinfo suminfo client-packages/client-1.0.1.msi
+          # Executables must carry their file version, or in-place upgrades delete them (see msi.ts)
+          msiinfo export client-packages/client-1.0.1.msi File | tee /dev/stderr | grep -E "^vpnclient\.exe\s.*\s[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+\s"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: client-packages
+          path: client-packages
+          retention-days: 7
+
+  windows-install:
+    name: Windows install test (MSI, setup.exe, virtual adapter)
+    needs: client-packages
+    runs-on: windows-2025
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: client-packages
+          path: client-packages
+      - name: Download the official SoftEther VPN Server (checksum verified)
+        shell: pwsh
+        run: |
+          $f = Join-Path $env:RUNNER_TEMP $env:SE_SERVER_X64
+          Invoke-WebRequest "$env:SE_RELEASE_URL/$env:SE_SERVER_X64" -OutFile $f
+          $h = (Get-FileHash $f -Algorithm SHA256).Hash.ToLower()
+          if ($h -ne $env:SE_SERVER_X64_SHA256) { throw "checksum mismatch: $h" }
+      - name: Install, connect, upgrade, uninstall
+        shell: pwsh
+        run: tools/ci/windows-install-test.ps1 -PackagesDir client-packages -ServerSfx (Join-Path $env:RUNNER_TEMP $env:SE_SERVER_X64) -OutDir install-test
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: windows-install-test
+          path: install-test
+          retention-days: 7

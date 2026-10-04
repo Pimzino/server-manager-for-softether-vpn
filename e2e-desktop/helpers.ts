@@ -37,11 +37,13 @@ const libEnv = { ...process.env, DYLD_LIBRARY_PATH: ".", LD_LIBRARY_PATH: "." };
 function runVpncmd(args: string[]): Promise<{ code: number; out: string }> {
   return new Promise((resolve) => {
     const p = spawn("./vpncmd", args, { cwd: CLIENT_DIR, env: libEnv, stdio: ["ignore", "pipe", "pipe"] });
-    let out = "";
+    let out = "", err = "";
     p.stdout.on("data", (d) => { out += String(d); });
-    p.stderr.on("data", (d) => { out += String(d); });
+    p.stderr.on("data", (d) => { err += String(d); });
     const t = setTimeout(() => p.kill("SIGKILL"), 30_000);
-    p.on("close", (code) => { clearTimeout(t); resolve({ code: code ?? -1, out }); });
+    // stdout only on success: callers parse it as CSV, and platform warnings on stderr (seen on macOS
+    // runners) would otherwise count as rows. On failure stderr is appended for diagnostics.
+    p.on("close", (code) => { clearTimeout(t); resolve({ code: code ?? -1, out: code === 0 ? out : out + err }); });
   });
 }
 
@@ -139,7 +141,8 @@ export interface App { app: ElectronApplication; page: Page; log: string[] }
 export async function launchApp(): Promise<App> {
   if (!existsSync(path.join(BUILD_DIR, "main/main.mjs"))) throw new Error("App not built: run node e2e-desktop/build.mjs");
   const app = await electron.launch({
-    args: [BUILD_DIR],
+    // GitHub's Linux runners restrict unprivileged user namespaces, so Chromium's sandbox cannot start there.
+    args: [BUILD_DIR, ...(process.platform === "linux" && process.env.CI ? ["--no-sandbox"] : [])],
     cwd: ROOT,
     env: {
       ...process.env,

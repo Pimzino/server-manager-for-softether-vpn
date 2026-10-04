@@ -163,7 +163,7 @@ function peMachine(buf: Buffer): "x64" | "x86" | "arm64" | "unknown" {
 }
 
 /** Read VS_VERSION_INFO FileVersion (fixed part) if present. */
-function peVersion(buf: Buffer): string {
+export function peVersion(buf: Buffer): string {
   try {
     const res = readPeResourcesById(buf, 16);
     const data = res[0];
