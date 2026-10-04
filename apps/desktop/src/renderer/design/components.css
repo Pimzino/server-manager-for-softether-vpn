@@ -51,7 +51,7 @@ code, kbd, pre { font-family: var(--sem-font-mono); }
 .sem-break { word-break: break-all; }
 .sem-text-red { color: var(--sem-red); }
 .sem-stack { display: flex; flex-direction: column; gap: var(--sem-space-6); }
-.sem-row-inline { display: inline-flex; align-items: center; gap: var(--sem-space-4); flex-wrap: wrap; }
+.sem-row-inline { display: inline-flex; align-items: center; gap: var(--sem-space-4); flex-wrap: wrap; max-width: 100%; min-width: 0; }
 .sem-inline-icons { display: inline-flex; align-items: center; gap: 3px; }
 .sem-inline-icons svg:not(:first-child) { margin-left: 6px; }
 .sem-code-inline, .sem-code {
