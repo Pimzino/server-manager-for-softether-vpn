@@ -189,6 +189,28 @@ self-signed test certificate: the exe, setup and MSI were all signed and verifie
   later modifies those stubs (appends a payload or edits resources), their signature becomes invalid, and they
   have to be re-signed at that point.
 
+### The project's self-signed certificate (release workflow)
+
+Releases built by `.github/workflows/release.yml` sign the Windows files with a self-signed code-signing
+certificate (`CN=SoftEther Manager (self-signed)`, RSA 4096, valid until October 2036). The private key is held
+only in the repository secrets `WIN_CSC_LINK` (base64 `.p12`) and `WIN_CSC_KEY_PASSWORD`; the public certificate is
+`apps/desktop/build/codesign/SoftEther-Manager-codesign.cer` and is attached to every release.
+
+SHA-256 fingerprint: `78:50:7A:2C:60:D3:81:46:DD:1D:3B:EB:6F:AD:72:69:49:6B:42:1B:6A:3B:BE:4F:3E:4B:A4:99:23:E5:B3:39`
+
+A self-signed certificate is not trusted by Windows by default: until it is imported, the files show an unknown
+publisher and SmartScreen still warns. What it gives is tamper detection and one stable publisher that an
+administrator can trust once (Group Policy, Intune or by hand) for all current and future releases:
+
+```powershell
+# elevated PowerShell; check the fingerprint above first
+Import-Certificate -FilePath SoftEther-Manager-codesign.cer -CertStoreLocation Cert:\LocalMachine\Root
+Import-Certificate -FilePath SoftEther-Manager-codesign.cer -CertStoreLocation Cert:\LocalMachine\TrustedPublisher
+```
+
+macOS builds stay ad-hoc signed: a self-signed certificate does not satisfy Gatekeeper, which only accepts a
+notarized Developer ID.
+
 ## What the checks prove
 
 Every check runs on every build unless you pass `--no-verify`. The results are in `BUILD-REPORT.md`.

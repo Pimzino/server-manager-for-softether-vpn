@@ -58,8 +58,16 @@ jobs:
       - name: MSI tools (wixl)
         run: brew install msitools
       - run: pnpm install --frozen-lockfile
+      # Windows files (app, setup, MSI) are Authenticode-signed with the project's self-signed certificate when
+      # the secrets are available (not on pull requests from forks). See docs/desktop-packaging.md.
       - name: Build, package and verify
-        run: pnpm --filter @sem/desktop run dist
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        run: |
+          if [ -z "$WIN_CSC_LINK" ]; then unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; fi
+          pnpm --filter @sem/desktop run dist
+          cp apps/desktop/build/codesign/SoftEther-Manager-codesign.cer apps/desktop/release/
       - name: Build report
         if: always()
         run: cat apps/desktop/release/BUILD-REPORT.md >> "$GITHUB_STEP_SUMMARY" || true
@@ -71,6 +79,7 @@ jobs:
             apps/desktop/release/*.zip
             apps/desktop/release/*.exe
             apps/desktop/release/*.msi
+            apps/desktop/release/*.cer
             apps/desktop/release/SHA256SUMS
           if-no-files-found: error
           compression-level: 0
