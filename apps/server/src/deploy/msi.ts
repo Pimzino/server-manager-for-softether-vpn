@@ -16,6 +16,7 @@ import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
+import { peVersion } from "./payload.ts";
 import { config } from "../config.ts";
 
 const run = promisify(execFile);
@@ -123,6 +124,9 @@ $job = Start-Job -ArgumentList $Dir, $Accounts, $Nic, $Connect, $DeleteProfiles,
   param($Dir, $Accounts, $Nic, $Connect, $DeleteProfiles, $CredKey, $Log)
   function Log([string]$m) { Add-Content -Path $Log -Value ("{0:u} {1}" -f (Get-Date), $m) }
   $vpncmd = Join-Path $Dir 'vpncmd.exe'
+  foreach ($f in @('vpncmd.exe', 'vpnclient.exe', 'hamcore.se2')) {
+    if (-not (Test-Path (Join-Path $Dir $f))) { Log "$f is missing from $Dir"; return 2 }
+  }
   function Vc([string[]]$argv, [switch]$Quiet) {
     $all = @('localhost', '/CLIENT', '/CMD') + $argv
     $out = & $vpncmd @all 2>&1 | Out-String
@@ -174,7 +178,10 @@ ${o.clientConfigPassword ? "    $cfgPw = (Get-Content -Raw -Path (Join-Path $Dir
   }
 }
 if (Wait-Job -Job $job -Timeout $TimeoutSec) {
-  $rc = Receive-Job -Job $job | Select-Object -Last 1
+  $jobErrors = @()
+  $rc = Receive-Job -Job $job -ErrorAction SilentlyContinue -ErrorVariable jobErrors | Select-Object -Last 1
+  foreach ($e in $jobErrors) { Log "error: $e" }
+  if ($jobErrors.Count -gt 0 -and -not ($rc -is [int])) { $rc = 1 }
   Log "configure finished rc=$rc"
   if ($rc -is [int] -and $rc -ne 0) { exit $rc }
   exit 0
@@ -382,6 +389,16 @@ export async function buildMsi(input: MsiBuildInput, outDir: string, outName: st
     await run(msibuild, [msi, "-q",
       "UPDATE `Property` SET `Value` = 'WIX_DOWNGRADE_DETECTED;WIX_UPGRADE_DETECTED;VPNUSERNAME;VPNPASSWORD' WHERE `Property` = 'SecureCustomProperties'"]);
     logLines.push("$ msibuild product.msi -q UPDATE Property SecureCustomProperties += VPNUSERNAME;VPNPASSWORD");
+    // wixl leaves File.Version empty. Windows Installer then treats the already-installed executables as
+    // "higher versioned" during a major upgrade, skips them, and RemoveExistingProducts deletes them with the
+    // old product: the upgrade ends with no client files. Record the real PE file versions.
+    for (const f of input.payload) {
+      const version = peVersion(await readFile(f.path));
+      if (!version) continue;
+      const id = f.name.replace(/[^A-Za-z0-9_.]/g, "_");
+      await run(msibuild, [msi, "-q", `UPDATE \`File\` SET \`Version\` = '${version}', \`Language\` = '0' WHERE \`File\` = '${id}'`]);
+      logLines.push(`$ msibuild product.msi -q UPDATE File SET Version = ${version} WHERE File = ${id}`);
+    }
     if (input.options.credentialMode === "install-time") {
       // The pending-credential key would inherit HKLM\SOFTWARE's ACL (Users: read). LockPermissions
       // replaces it with SYSTEM + Administrators only, before the value is written.
