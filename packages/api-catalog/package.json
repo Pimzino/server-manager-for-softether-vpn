@@ -1,0 +1,6 @@
+{
+  "name": "@sem/api-catalog",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": { "./catalog.json": "./catalog.json", ".": "./index.ts" }
+}

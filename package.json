@@ -1,0 +1,30 @@
+{
+  "name": "softether-manager",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "gen:catalog": "python3 tools/gen-catalog.py",
+    "dev:server": "pnpm --filter @sem/server run dev",
+    "dev:web": "pnpm --filter @sem/web run dev",
+    "build": "pnpm --filter @sem/web run build",
+    "start": "pnpm --filter @sem/server run start",
+    "typecheck": "pnpm -r run typecheck",
+    "e2e": "playwright test -c e2e/playwright.config.ts; node e2e/summarize.ts",
+    "e2e:desktop": "playwright test -c e2e-desktop/playwright.config.ts; node e2e-desktop/summarize.ts",
+    "dev": "pnpm --filter @sem/web run build && node --env-file=dev.env --watch apps/server/src/main.ts",
+    "dev:ui": "SEM_API=http://127.0.0.1:18080 pnpm --filter @sem/web run dev --host 127.0.0.1 --port 5173 --strictPort",
+    "dev:softether": "tools/dev-softether.sh",
+    "dev:sync": "tools/sync-dev.sh"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "pnpm@12.6.0",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "undici": "^8.11.2",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2",
+    "@types/node": "^26.6.3"
+  }
+}

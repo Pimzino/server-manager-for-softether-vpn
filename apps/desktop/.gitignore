@@ -1,0 +1,6 @@
+# Build output (see docs/desktop-packaging.md)
+dist/
+release/
+# exFAT AppleDouble files and Finder metadata
+._*
+.DS_Store

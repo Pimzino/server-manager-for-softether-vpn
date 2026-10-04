@@ -1,0 +1,80 @@
+{
+  "_comment": "Methods dispatched by src/Cedar/Admin.c that are absent from the official vpnrpc.ts stubs. Field names verified against a live 5.x server (build 5187). Parallel arrays: element i of each array forms one record.",
+  "methods": {
+    "GetPortsUDP": { "name": "GetPortsUDP", "input": null, "output": "VpnRpcPorts", "doc": "Get the list of UDP ports the server listens on for UDP-based protocols (OpenVPN, WireGuard, etc.)." },
+    "SetPortsUDP": { "name": "SetPortsUDP", "input": "VpnRpcPorts", "output": "VpnRpcPorts", "doc": "Set the list of UDP ports the server listens on. Replaces the entire list. Requires server administrator privileges." },
+    "GetProtoOptions": { "name": "GetProtoOptions", "input": "VpnRpcProtoOptions", "output": "VpnRpcProtoOptions", "doc": "Get per-protocol options (e.g. OpenVPN, WireGuard, SSTP). Specify Protocol_str. Options are returned as parallel arrays Name_str / Type_u32 (1=string, 2=bool, 3=uint32) / Value_bin (base64 raw value; strings are NUL-terminated, uint32 little-endian)." },
+    "SetProtoOptions": { "name": "SetProtoOptions", "input": "VpnRpcProtoOptions", "output": "VpnRpcProtoOptions", "doc": "Set per-protocol options. Same encoding as GetProtoOptions. Requires server administrator privileges." },
+    "GetServerCipherList": { "name": "GetServerCipherList", "input": null, "output": "VpnRpcStr", "doc": "Get the ';'-separated list of TLS cipher suites supported by the server's TLS library." },
+    "AddWgk": { "name": "AddWgk", "input": "VpnRpcWgk", "output": "VpnRpcWgk", "doc": "Register WireGuard client public keys, each mapped to a Virtual Hub and user. Parallel arrays Key_str / Hub_str / User_str." },
+    "DeleteWgk": { "name": "DeleteWgk", "input": "VpnRpcWgk", "output": "VpnRpcWgk", "doc": "Delete WireGuard client public keys (specify Key_str entries)." },
+    "EnumWgk": { "name": "EnumWgk", "input": null, "output": "VpnRpcWgk", "doc": "List registered WireGuard client public keys with their Virtual Hub and user mapping." },
+    "AddLicenseKey": { "name": "AddLicenseKey", "input": "VpnRpcTest", "output": "VpnRpcTest", "doc": "Add a license key (commercial PacketiX editions only; returns 'Unsupported' on open-source editions). Key in StrValue_str." },
+    "DelLicenseKey": { "name": "DelLicenseKey", "input": "VpnRpcTest", "output": "VpnRpcTest", "doc": "Delete a license key by id in IntValue_u32 (commercial editions only)." },
+    "EnumLicenseKey": { "name": "EnumLicenseKey", "input": null, "output": "VpnRpcEnumLicenseKey", "doc": "List registered license keys (commercial editions only)." },
+    "GetLicenseStatus": { "name": "GetLicenseStatus", "input": null, "output": "VpnRpcLicenseStatus", "doc": "Get license status (commercial editions only)." },
+    "EnumEthVLan": { "name": "EnumEthVLan", "input": null, "output": "VpnRpcEnumEthVLan", "doc": "List Windows network adapters and whether VLAN tag pass-through is enabled (Windows servers only)." },
+    "SetEnableEthVLan": { "name": "SetEnableEthVLan", "input": "VpnRpcTest", "output": "VpnRpcTest", "doc": "Enable/disable VLAN tag pass-through on a Windows network adapter: StrValue_str = adapter GUID/name, IntValue_u32 = 1 enable / 0 disable (Windows servers only)." },
+    "Debug": { "name": "Debug", "input": "VpnRpcTest", "output": "VpnRpcTest", "doc": "Internal debug command. IntValue_u32 = debug command id, StrValue_str = argument. For diagnostics only.", "dangerous": true }
+  },
+  "types": {
+    "VpnRpcPorts": { "name": "VpnRpcPorts", "doc": "List of ports", "fields": [
+      { "name": "Ports_u32", "kind": "array", "items": "number", "doc": "Port numbers" }
+    ]},
+    "VpnRpcProtoOptions": { "name": "VpnRpcProtoOptions", "doc": "Protocol options (parallel arrays)", "fields": [
+      { "name": "Protocol_str", "kind": "string", "doc": "Protocol name, e.g. OpenVPN, WireGuard, SSTP" },
+      { "name": "Name_str", "kind": "array", "items": "string", "doc": "Option names" },
+      { "name": "Type_u32", "kind": "array", "items": "number", "doc": "Option types: 1=string, 2=bool, 3=uint32" },
+      { "name": "Value_bin", "kind": "array", "items": "binary", "doc": "Option values (base64 of raw bytes)" }
+    ]},
+    "VpnRpcStr": { "name": "VpnRpcStr", "doc": "A single string", "fields": [
+      { "name": "String_str", "kind": "string", "doc": "String value" }
+    ]},
+    "VpnRpcWgk": { "name": "VpnRpcWgk", "doc": "WireGuard keys (parallel arrays)", "fields": [
+      { "name": "Key_str", "kind": "array", "items": "string", "doc": "WireGuard client public key (base64)" },
+      { "name": "Hub_str", "kind": "array", "items": "string", "doc": "Virtual Hub name" },
+      { "name": "User_str", "kind": "array", "items": "string", "doc": "User name" }
+    ]},
+    "VpnRpcEnumLicenseKeyItem": { "name": "VpnRpcEnumLicenseKeyItem", "doc": "License key", "fields": [
+      { "name": "Id_u32", "kind": "number", "doc": "Id" },
+      { "name": "LicenseKey_str", "kind": "string", "doc": "License key" },
+      { "name": "LicenseId_str", "kind": "string", "doc": "License id" },
+      { "name": "LicenseName_str", "kind": "string", "doc": "License name" },
+      { "name": "Expires_dt", "kind": "datetime", "doc": "Expiry" },
+      { "name": "Status_u32", "kind": "number", "doc": "Status" },
+      { "name": "ProductId_u32", "kind": "number", "doc": "Product id" },
+      { "name": "SystemId_u64", "kind": "number", "doc": "System id" },
+      { "name": "SerialId_u32", "kind": "number", "doc": "Serial id" }
+    ]},
+    "VpnRpcEnumLicenseKey": { "name": "VpnRpcEnumLicenseKey", "doc": "License keys", "fields": [
+      { "name": "NumItem_u32", "kind": "number", "doc": "Number of items" },
+      { "name": "LicenseKeyList", "kind": "array", "items": "VpnRpcEnumLicenseKeyItem", "doc": "Keys" }
+    ]},
+    "VpnRpcLicenseStatus": { "name": "VpnRpcLicenseStatus", "doc": "License status", "fields": [
+      { "name": "EditionId_u32", "kind": "number", "doc": "Edition id" },
+      { "name": "EditionStr_str", "kind": "string", "doc": "Edition" },
+      { "name": "SystemId_u64", "kind": "number", "doc": "System id" },
+      { "name": "SystemExpires_dt", "kind": "datetime", "doc": "System expiry" },
+      { "name": "NumClientConnectLicense_u32", "kind": "number", "doc": "Client connection licenses" },
+      { "name": "NumBridgeConnectLicense_u32", "kind": "number", "doc": "Bridge connection licenses" },
+      { "name": "NeedSubscription_bool", "kind": "boolean", "doc": "Needs subscription" },
+      { "name": "AllowEnterpriseFunction_bool", "kind": "boolean", "doc": "Enterprise functions allowed" },
+      { "name": "SubscriptionExpires_dt", "kind": "datetime", "doc": "Subscription expiry" },
+      { "name": "IsSubscriptionExpired_bool", "kind": "boolean", "doc": "Subscription expired" },
+      { "name": "NumUserCreationLicense_u32", "kind": "number", "doc": "User creation licenses" },
+      { "name": "ReleaseDate_dt", "kind": "datetime", "doc": "Release date" }
+    ]},
+    "VpnRpcEnumEthVLanItem": { "name": "VpnRpcEnumEthVLanItem", "doc": "Network adapter", "fields": [
+      { "name": "DeviceName_str", "kind": "string", "doc": "Device name" },
+      { "name": "Guid_str", "kind": "string", "doc": "GUID" },
+      { "name": "DeviceInstanceId_str", "kind": "string", "doc": "Device instance id" },
+      { "name": "DriverName_str", "kind": "string", "doc": "Driver name" },
+      { "name": "DriverType_str", "kind": "string", "doc": "Driver type" },
+      { "name": "Support_bool", "kind": "boolean", "doc": "VLAN supported" },
+      { "name": "Enabled_bool", "kind": "boolean", "doc": "VLAN enabled" }
+    ]},
+    "VpnRpcEnumEthVLan": { "name": "VpnRpcEnumEthVLan", "doc": "Adapters", "fields": [
+      { "name": "Devices", "kind": "array", "items": "VpnRpcEnumEthVLanItem", "doc": "Adapters" }
+    ]}
+  }
+}

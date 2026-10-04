@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements for the main app when it is signed with a Developer ID and the hardened runtime
+  (see docs/desktop-packaging.md). Ad-hoc builds (the default on this machine) are signed without the
+  hardened runtime and do not use this file.
+  allow-jit: V8 needs it under the hardened runtime. The app is not sandboxed (it is distributed outside
+  the Mac App Store), so no network entitlements are required.
+-->
+<plist version="1.0">
+  <dict>
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+  </dict>
+</plist>

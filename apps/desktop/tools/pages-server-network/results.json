@@ -1,0 +1,188 @@
+{
+  "at": "2026-09-27T17:44:09.364Z",
+  "checks": [
+    {
+      "page": "setup",
+      "name": "build main + preload (esbuild) and the renderer (Vite) into a temp dir",
+      "ok": true,
+      "detail": "/var/folders/dt/ylwfrwzx7y5ctml8w1r_0sn00000gq/T/sem-pages-net-11oqZd/build",
+      "ms": 1085
+    },
+    {
+      "page": "setup",
+      "name": "start vpnserver on 127.0.0.1:16011 and create fixtures over JSON-RPC",
+      "ok": true,
+      "detail": "SoftEther VPN Server Developer Edition (64 bit) (Open Source) build 5187; hubs NET SALES LAB(offline); switch edge; bridge LAB↔semnic9; DDNS client and NAT traversal disabled (offline)",
+      "ms": 658
+    },
+    {
+      "page": "setup",
+      "name": "launch the built app (Playwright _electron, fresh SEM_DATA_DIR) and add the server through window.sem.api",
+      "ok": true,
+      "detail": "server #1 (native, pinned 05:61:3F:EE…), hub-admin connection #2",
+      "ms": 1273
+    },
+    {
+      "page": "Virtual Hubs",
+      "name": "read: table lists the server's hubs with status (LAB offline)",
+      "ok": true,
+      "detail": "rows NET, SALES, LAB + a 117-char name (truncated, no sideways scroll 843/843); meta “4 hubs · 3 online · 0 sessions”",
+      "ms": 644
+    },
+    {
+      "page": "Virtual Hubs",
+      "name": "write: New Virtual Hub sheet validates, then CreateHub (password, max sessions, hidden)",
+      "ok": true,
+      "detail": "server refuses “bad@hub” (error 38, invalid parameter) and the sheet blocks it; GetHub UIHUB → Online true, NoEnum true, MaxSession 5 (created true); hub admin password still works",
+      "ms": 1755
+    },
+    {
+      "page": "Virtual Hubs",
+      "name": "write: Take Offline (toolbar, confirmed) and Bring Online (context menu)",
+      "ok": true,
+      "detail": "GetHubStatus SALES → offline, then online",
+      "ms": 589
+    },
+    {
+      "page": "Virtual Hubs",
+      "name": "write: Delete Hub… from the context menu needs the typed name",
+      "ok": true,
+      "detail": "EnumHub no longer lists UIHUB",
+      "ms": 5252
+    },
+    {
+      "page": "Virtual Hubs",
+      "name": "read: hub admin mode lists only its hub, without New/Delete",
+      "ok": true,
+      "detail": "1 row (NET), purple hub-admin callout, no New/Delete",
+      "ms": 4847
+    },
+    {
+      "page": "Connections",
+      "name": "fixture: a vpncmd admin session held open (a second Admin RPC connection)",
+      "ok": true,
+      "detail": "CID-11 from 127.0.0.1:55197",
+      "ms": 595
+    },
+    {
+      "page": "Connections",
+      "name": "read: table lists TCP connections; type filter; Get Info opens the Inspector (GetConnectionInfo)",
+      "ok": true,
+      "detail": "4 connections, 0 in the VPN filter; Inspector shows CID-11 (Admin RPC); Esc closes it (modals in DOM: 5 roots, 0 open)",
+      "ms": 2349
+    },
+    {
+      "page": "Connections",
+      "name": "write: Disconnect… from the context menu closes the vpncmd connection on the server",
+      "ok": true,
+      "detail": "EnumConnection no longer lists CID-11",
+      "ms": 283
+    },
+    {
+      "page": "Listeners & Ports",
+      "name": "read: TCP listener table marks the port this connection uses",
+      "ok": true,
+      "detail": "16011 This connection Listening Custom port",
+      "ms": 347
+    },
+    {
+      "page": "Listeners & Ports",
+      "name": "write: Add Listener… (validation, CreateListener) then Stop (confirmed) and Delete",
+      "ok": true,
+      "detail": "EnumListener: 16012 created → stopped → deleted",
+      "ms": 6825
+    },
+    {
+      "page": "Listeners & Ports",
+      "name": "write: UDP ports via the tags field, Apply (confirmed SetPortsUDP)",
+      "ok": true,
+      "detail": "GetPortsUDP → [16013]",
+      "ms": 543
+    },
+    {
+      "page": "Listeners & Ports",
+      "name": "VPN over ICMP switch → Apply asks first (SetSpecialListener wording); cancelled, then Revert",
+      "ok": true,
+      "detail": "confirmation “Change VPN over ICMP and DNS? VPN over ICMP will be on and VPN over DNS off. Cancel Apply…”; Cancel keeps the edit and calls nothing (GetSpecialListener ICMP false, DNS false); Revert clears it",
+      "ms": 497
+    },
+    {
+      "page": "Local Bridges",
+      "name": "read: bridges table, host support and (empty) adapter list",
+      "ok": true,
+      "detail": "LAB semnic9 Network adapter Offline; host: Host support What the server’s operating system allows. Local bridges Supported Packet capture driver Not required Tap devices Not supported (Linux only)",
+      "ms": 353
+    },
+    {
+      "page": "Local Bridges",
+      "name": "write: New Local Bridge… (hub + typed device) then Delete… (confirmed)",
+      "ok": true,
+      "detail": "EnumLocalBridge: NET↔semnic9 added, then removed",
+      "ms": 2022
+    },
+    {
+      "page": "Layer 3 Switches",
+      "name": "read: switch list and the detail of “edge” (interface + route)",
+      "ok": true,
+      "detail": "edge: NET 192.168.30.1/24; route 10.99.0.0/16 via 192.168.30.254",
+      "ms": 388
+    },
+    {
+      "page": "Layer 3 Switches",
+      "name": "write: New Switch → Add Interface → Add Route (validated) → Start → Stop → Delete",
+      "ok": true,
+      "detail": "server refuses “bad@sw”, a /32 interface and gateway 0.0.0.0 (error 38, invalid parameter), and the sheets block them; core, SALES 192.168.40.1/24, 10.40.0.0/16 via 192.168.40.254 metric 5; started, stopped, deleted; detail falls back to “edge”",
+      "ms": 12803
+    },
+    {
+      "page": "DDNS & VPN Azure",
+      "name": "read: the server's DDNS client is turned off → one explanation, and no DDNS / VPN Azure calls fail",
+      "ok": true,
+      "detail": "caps b_support_ddns 0, b_support_azure 0; GetDDnsClientStatus → GetDDnsClientStatus error 33: Error code 33: Unsupported.; page: “Dynamic DNS is turned off on this server Its configuration disables the Dynamic DNS client (bool Disabled true in the DD…”",
+      "ms": 1895
+    },
+    {
+      "page": "all pages",
+      "name": "the throwaway server has no sockets to anything outside this machine (lsof on its process group)",
+      "ok": true,
+      "detail": "none (DDNS, VPN Azure and NAT traversal are off; bridges use a device that doesn't exist)",
+      "ms": 33
+    },
+    {
+      "page": "all pages",
+      "name": "no console errors, page errors or CSP violations",
+      "ok": true,
+      "detail": "none",
+      "ms": 0
+    }
+  ],
+  "problems": [],
+  "shots": [
+    "design-screenshots/pages/server-network/hubs-light.png",
+    "design-screenshots/pages/server-network/hubs-dark.png",
+    "design-screenshots/pages/server-network/hubs-new-sheet-light.png",
+    "design-screenshots/pages/server-network/hubs-new-sheet-dark.png",
+    "design-screenshots/pages/server-network/hubs-delete-confirm-light.png",
+    "design-screenshots/pages/server-network/hubs-delete-confirm-dark.png",
+    "design-screenshots/pages/server-network/hubs-hub-admin-light.png",
+    "design-screenshots/pages/server-network/hubs-hub-admin-dark.png",
+    "design-screenshots/pages/server-network/connections-inspector-light.png",
+    "design-screenshots/pages/server-network/connections-inspector-dark.png",
+    "design-screenshots/pages/server-network/connections-light.png",
+    "design-screenshots/pages/server-network/connections-dark.png",
+    "design-screenshots/pages/server-network/listeners-light.png",
+    "design-screenshots/pages/server-network/listeners-dark.png",
+    "design-screenshots/pages/server-network/bridges-light.png",
+    "design-screenshots/pages/server-network/bridges-dark.png",
+    "design-screenshots/pages/server-network/bridges-new-sheet-light.png",
+    "design-screenshots/pages/server-network/bridges-new-sheet-dark.png",
+    "design-screenshots/pages/server-network/l3switches-light.png",
+    "design-screenshots/pages/server-network/l3switches-dark.png",
+    "design-screenshots/pages/server-network/l3switches-add-route-light.png",
+    "design-screenshots/pages/server-network/l3switches-add-route-dark.png",
+    "design-screenshots/pages/server-network/l3switches-running-light.png",
+    "design-screenshots/pages/server-network/l3switches-running-dark.png",
+    "design-screenshots/pages/server-network/ddns-disabled-light.png",
+    "design-screenshots/pages/server-network/ddns-disabled-dark.png"
+  ]
+}

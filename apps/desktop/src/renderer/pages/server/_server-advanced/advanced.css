@@ -1,0 +1,74 @@
+/* Local styles for the "server-advanced" pages (Clustering, Server Settings, Logs & Syslog,
+   Configuration & Backups, API Console). Only design tokens: no hard-coded colours. */
+
+/* ------------------------------------------------------------ text viewer (logs, configs) */
+.sa-text {
+  background: var(--sem-bg-code); border: 0.5px solid var(--sem-separator); border-radius: var(--sem-radius-lg);
+  overflow: auto; font-family: var(--sem-font-mono); font-size: var(--sem-fz-small); line-height: 1.5; tab-size: 4;
+  user-select: text; -webkit-user-select: text;
+}
+.sa-text-lines { padding: 6px 0; min-width: max-content; }
+.sa-text[data-wrap] .sa-text-lines { min-width: 0; }
+.sa-line { display: grid; grid-template-columns: var(--sa-gutter, 48px) minmax(0, 1fr); column-gap: 12px; padding-right: 12px; }
+.sa-line-no { text-align: right; color: var(--sem-text-3); user-select: none; -webkit-user-select: none; font-variant-numeric: tabular-nums; }
+.sa-line-text { white-space: pre; }
+.sa-text[data-wrap] .sa-line-text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.sa-line[data-hit] { background: var(--sem-yellow-soft); }
+.sa-line[data-current] { box-shadow: inset 3px 0 0 var(--sem-orange-dot); }
+.sa-line mark { background: transparent; color: inherit; font-weight: var(--sem-fw-semibold); box-shadow: inset 0 -2px 0 var(--sem-orange-dot); }
+.sa-text-empty { padding: 18px; color: var(--sem-text-2); font-family: var(--sem-font); font-size: var(--sem-fz-body); }
+
+/* toolbar above a viewer: filter field, counters, switches */
+.sa-viewer-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.sa-viewer-bar .sa-spacer { flex: 1; }
+.sa-viewer-meta { font-size: var(--sem-fz-small); color: var(--sem-text-2); font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------------------------ diff */
+.sa-diff { width: 100%; border-collapse: collapse; }
+.sa-diff td { padding: 0 6px; vertical-align: top; }
+.sa-diff .sa-diff-no { width: 48px; text-align: right; color: var(--sem-text-3); user-select: none; -webkit-user-select: none; font-variant-numeric: tabular-nums; }
+.sa-diff .sa-diff-sign { width: 14px; text-align: center; user-select: none; -webkit-user-select: none; font-weight: var(--sem-fw-semibold); }
+.sa-diff .sa-diff-text { white-space: pre; width: 100%; }
+.sa-diff tr[data-difftype="add"] { background: var(--sem-green-soft); }
+.sa-diff tr[data-difftype="add"] .sa-diff-sign { color: var(--sem-green); }
+.sa-diff tr[data-difftype="del"] { background: var(--sem-red-soft); }
+.sa-diff tr[data-difftype="del"] .sa-diff-sign { color: var(--sem-red); }
+.sa-diff tr[data-difftype="skip"] td { background: var(--sem-accent-soft); color: var(--sem-accent-text); padding: 2px 10px; font-family: var(--sem-font); font-size: var(--sem-fz-small); }
+
+/* ------------------------------------------------------------------- API console */
+.sa-console { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 22px; align-items: start; }
+@media (max-width: 980px) { .sa-console { grid-template-columns: minmax(0, 1fr); } }
+.sa-picker {
+  position: sticky; top: 0; display: flex; flex-direction: column; min-height: 0;
+  height: calc(100vh - var(--sem-toolbar-h) - 150px); min-height: 380px;
+  background: var(--sem-bg-inset); border: 0.5px solid var(--sem-separator); border-radius: var(--sem-radius-lg); overflow: hidden;
+}
+.sa-picker-head { display: flex; flex-direction: column; gap: 6px; padding: 8px; border-bottom: 0.5px solid var(--sem-separator); }
+.sa-picker-list { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 6px 8px; outline: none; }
+.sa-picker-group { font-size: var(--sem-fz-caption); font-weight: var(--sem-fw-semibold); color: var(--sem-text-2); padding: 10px 8px 3px; }
+.sa-picker-group:first-child { padding-top: 4px; }
+.sa-method {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; align-items: center; width: 100%;
+  padding: 4px 8px; border-radius: var(--sem-radius-sm); cursor: default; text-align: left;
+  border: 0; background: transparent; font: inherit; color: inherit;
+}
+.sa-method:hover { background: var(--sem-fill-hover); }
+.sa-method-name { font-family: var(--sem-font-mono); font-size: var(--sem-fz-small); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sa-method-doc { grid-column: 1 / -1; font-size: var(--sem-fz-caption); color: var(--sem-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sa-method[aria-selected="true"] { background: var(--sem-fill-selected); }
+.sa-picker-list:focus-visible .sa-method[aria-selected="true"], .sa-picker-list:focus .sa-method[aria-selected="true"] { background: var(--sem-selection); color: var(--sem-text-on-accent); }
+.sa-picker-list:focus .sa-method[aria-selected="true"] .sa-method-doc { color: inherit; opacity: 0.85; }
+.sa-picker-list:focus .sa-method[aria-selected="true"] .sem-tag { background: transparent; color: inherit; box-shadow: inset 0 0 0 0.5px currentColor; }
+.sa-picker-foot { padding: 6px 10px; border-top: 0.5px solid var(--sem-separator); font-size: var(--sem-fz-caption); color: var(--sem-text-2); }
+
+.sa-method-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.sa-method-title { margin: 0; font-family: var(--sem-font-mono); font-size: var(--sem-fz-headline); font-weight: var(--sem-fw-semibold); }
+.sa-method-tags { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.sa-doc { margin: 8px 0 0; color: var(--sem-text); max-width: 76ch; }
+.sa-doc[data-clamped] { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.sa-run-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.sa-result-head { display: flex; align-items: center; gap: 8px; }
+
+/* segmented view switch under a page header */
+.sa-views { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; flex-wrap: wrap; }
+.sa-views + .sem-section, .sa-views + .sem-callouts { margin-top: 14px; }

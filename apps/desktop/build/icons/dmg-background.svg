@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="380" viewBox="0 0 540 380">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7FAFF"/>
+      <stop offset="1" stop-color="#E6EEFA"/>
+    </linearGradient>
+  </defs>
+  <rect width="540" height="380" fill="url(#bg)"/>
+  <text x="270" y="58" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
+        font-size="20" font-weight="600" fill="#1C2B45">SoftEther Manager</text>
+  <text x="270" y="84" text-anchor="middle" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif"
+        font-size="13" fill="#51607A">Drag the app into the Applications folder to install it</text>
+  <g fill="none" stroke="#7F9CC8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M222 190 H316"/>
+    <path d="M300 174 L318 190 L300 206"/>
+  </g>
+  <text x="270" y="352" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif"
+        font-size="11" fill="#8A97AD">Manage SoftEther VPN Servers from macOS and Windows</text>
+</svg>

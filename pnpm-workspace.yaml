@@ -1,0 +1,21 @@
+packages:
+  - packages/*
+  - apps/*
+
+# Flat node_modules: electron-builder and the packaging/E2E scripts resolve tools (electron, app-builder-lib,
+# @electron/asar, vite...) from the workspace root, which pnpm's default isolated layout does not expose.
+nodeLinker: hoisted
+
+# Supply-chain hardening
+# Releases younger than 3 days are not installed (hijacked versions are usually caught within that window).
+minimumReleaseAge: 4320
+# Transitive dependencies must come from the registry (no git/tarball URLs).
+blockExoticSubdeps: true
+# Dependency lifecycle scripts are blocked unless listed here as true. None of these are needed:
+#  - esbuild: its postinstall only optimises the binary lookup; the platform package works without it.
+#  - fsevents: ships a prebuilt binary; the script is a node-gyp fallback.
+#  - electron-winstaller: only vendors a 7-Zip binary for Squirrel installers, which we don't build.
+allowBuilds:
+  esbuild: false
+  fsevents: false
+  electron-winstaller: false

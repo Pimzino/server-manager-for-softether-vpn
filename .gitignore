@@ -1,0 +1,26 @@
+node_modules/
+dist/
+data/
+*.log
+._*
+.DS_Store
+vendor/
+e2e/artifacts/
+test-results/
+playwright-report/
+dev.env
+
+# desktop packaging / design working files
+apps/desktop/release/
+apps/desktop/design-screenshots/
+e2e-desktop/artifacts/
+e2e-desktop/.build/
+Icon/
+apps/desktop/Icon/
+# local-only tooling state
+.claude/
+*.tsbuildinfo
+# output of the page-verification helper scripts (contains machine-specific data)
+apps/desktop/tools/**/artifacts/
+apps/desktop/tools/**/REPORT.md
+apps/desktop/tools/**/report.json

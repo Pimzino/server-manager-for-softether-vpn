@@ -1,0 +1,179 @@
+/*
+ * SoftEther Manager design tokens. Every colour, size and duration used by the renderer comes from here.
+ * Light values on :root, dark values under [data-mantine-color-scheme="dark"] (Mantine sets the attribute
+ * on <html>, following the OS unless the user overrides it in Preferences).
+ * Documented in docs/desktop-design.md, "Tokens".
+ */
+:root {
+  /* ---- Typography ------------------------------------------------------ */
+  --sem-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  --sem-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  --sem-font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, "Cascadia Mono", Consolas, "Liberation Mono", monospace;
+  --sem-fz-caption: 11px;   /* column headers, badges, footnotes */
+  --sem-fz-small: 12px;     /* secondary text, descriptions */
+  --sem-fz-body: 13px;      /* default text, controls, table cells */
+  --sem-fz-headline: 15px;  /* dialog titles */
+  --sem-fz-title3: 17px;    /* metric values */
+  --sem-fz-title2: 22px;    /* page titles */
+  --sem-fz-title1: 28px;    /* welcome screen */
+  --sem-lh-tight: 1.2;
+  --sem-lh-body: 1.4;
+  --sem-fw-regular: 400;
+  --sem-fw-medium: 500;
+  --sem-fw-semibold: 600;
+  --sem-fw-bold: 700;
+
+  /* ---- Spacing (4 px grid) -------------------------------------------- */
+  --sem-space-1: 2px;
+  --sem-space-2: 4px;
+  --sem-space-3: 6px;
+  --sem-space-4: 8px;
+  --sem-space-5: 12px;
+  --sem-space-6: 16px;
+  --sem-space-7: 20px;
+  --sem-space-8: 24px;
+  --sem-space-9: 32px;
+  --sem-space-10: 48px;
+  --sem-page-x: 28px;       /* content horizontal padding */
+  --sem-page-y: 20px;
+
+  /* ---- Radii ----------------------------------------------------------- */
+  --sem-radius-xs: 3px;     /* badges, kbd */
+  --sem-radius-sm: 5px;     /* controls, sidebar rows */
+  --sem-radius-md: 6px;     /* buttons, inputs */
+  --sem-radius-lg: 9px;     /* grouped boxes, popovers */
+  --sem-radius-xl: 12px;    /* dialogs, sheets */
+
+  /* ---- Layout ---------------------------------------------------------- */
+  --sem-toolbar-h: 52px;
+  --sem-sidebar-w: 248px;
+  --sem-scope-w: 228px;  /* fits “Admin & Extended Options” */
+  --sem-inspector-w: 380px;
+  --sem-row-h: 26px;        /* table rows */
+  --sem-nav-row-h: 28px;    /* sidebar rows */
+  --sem-traffic-lights: 78px; /* room for the macOS traffic lights (x 18, y 18) */
+  --sem-caption-buttons: 0px; /* room for Windows caption buttons (titleBarOverlay) */
+
+  /* ---- Motion ---------------------------------------------------------- */
+  --sem-dur-fast: 100ms;
+  --sem-dur: 180ms;
+  --sem-dur-slow: 260ms;
+  --sem-ease: cubic-bezier(0.2, 0, 0, 1);
+  --sem-ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ---- Colour: light --------------------------------------------------- */
+  --sem-accent: #007aff;
+  --sem-accent-hover: #0068d9;
+  --sem-accent-contrast: #ffffff;
+  --sem-selection: #0060db;          /* filled selection (white text, 5.7:1) */
+  --sem-accent-soft: rgba(0, 122, 255, 0.11);
+  --sem-accent-text: #0058bb;
+  --sem-focus: rgba(0, 122, 255, 0.5);
+
+  --sem-bg-window: #f3f3f5;          /* window base behind vibrancy */
+  --sem-bg-sidebar: rgba(234, 234, 237, 0.92); /* fallback when there is no vibrancy */
+  --sem-bg-content: #ffffff;
+  --sem-bg-scope: #fafafb;           /* secondary navigation column */
+  --sem-bg-toolbar: rgba(255, 255, 255, 0.86);
+  --sem-bg-elevated: #ffffff;        /* dialogs, popovers, inspector */
+  --sem-bg-inset: #f6f6f8;           /* grouped boxes */
+  --sem-bg-control: #ffffff;
+  --sem-bg-code: #f5f5f7;
+
+  --sem-fill-hover: rgba(0, 0, 0, 0.045);
+  --sem-fill-pressed: rgba(0, 0, 0, 0.085);
+  --sem-fill-selected: rgba(0, 0, 0, 0.075); /* selection when the list is not focused */
+  --sem-fill-quiet: rgba(0, 0, 0, 0.03);
+  --sem-row-alt: rgba(0, 0, 0, 0.022);
+
+  --sem-text: #1d1d1f;
+  --sem-text-2: rgba(0, 0, 0, 0.58);
+  --sem-text-3: rgba(0, 0, 0, 0.38);      /* placeholders, disabled, decoration only (not AA for text) */
+  --sem-text-sidebar-heading: rgba(0, 0, 0, 0.55);
+  --sem-text-on-accent: #ffffff;
+
+  --sem-separator: rgba(0, 0, 0, 0.085);
+  --sem-separator-strong: rgba(0, 0, 0, 0.14);
+  --sem-border-control: rgba(0, 0, 0, 0.2);
+
+  --sem-green: #1a7431;  --sem-green-dot: #34c759; --sem-green-soft: rgba(52, 199, 89, 0.14);
+  --sem-red: #c00013;    --sem-red-dot: #ff3b30;   --sem-red-soft: rgba(255, 59, 48, 0.11);
+  --sem-orange: #a14300; --sem-orange-dot: #ff9500; --sem-orange-soft: rgba(255, 149, 0, 0.14);
+  --sem-yellow: #7f6000; --sem-yellow-dot: #ffcc00; --sem-yellow-soft: rgba(255, 204, 0, 0.18);
+  --sem-purple: #7b3b9e; --sem-purple-dot: #af52de; --sem-purple-soft: rgba(175, 82, 222, 0.12);
+  --sem-teal: #0b6874;   --sem-teal-dot: #30b0c7;  --sem-teal-soft: rgba(48, 176, 199, 0.13);
+  --sem-gray: #5f5f64;   --sem-gray-dot: #aeaeb2;  --sem-gray-soft: rgba(120, 120, 128, 0.12);
+
+  /* ---- Elevation ------------------------------------------------------- */
+  --sem-shadow-1: 0 0.5px 1px rgba(0, 0, 0, 0.08), 0 0 0 0.5px rgba(0, 0, 0, 0.06);
+  --sem-shadow-2: 0 4px 16px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.1);
+  --sem-shadow-3: 0 18px 50px rgba(0, 0, 0, 0.22), 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+
+  color-scheme: light;
+}
+
+:root[data-mantine-color-scheme="dark"] {
+  --sem-accent: #0a84ff;
+  --sem-accent-hover: #3396ff;
+  --sem-accent-soft: rgba(10, 132, 255, 0.2);
+  --sem-accent-text: #6db5ff;
+  --sem-selection: #0a5fd8;
+  --sem-focus: rgba(10, 132, 255, 0.6);
+
+  --sem-bg-window: #1c1c1e;
+  --sem-bg-sidebar: rgba(40, 40, 43, 0.94);
+  --sem-bg-content: #1e1e20;
+  --sem-bg-scope: #232326;
+  --sem-bg-toolbar: rgba(30, 30, 32, 0.86);
+  --sem-bg-elevated: #2a2a2d;
+  --sem-bg-inset: #252528;
+  --sem-bg-control: #2f2f32;
+  --sem-bg-code: #28282b;
+
+  --sem-fill-hover: rgba(255, 255, 255, 0.055);
+  --sem-fill-pressed: rgba(255, 255, 255, 0.1);
+  --sem-fill-selected: rgba(255, 255, 255, 0.09);
+  --sem-fill-quiet: rgba(255, 255, 255, 0.035);
+  --sem-row-alt: rgba(255, 255, 255, 0.028);
+
+  --sem-text: rgba(255, 255, 255, 0.9);
+  --sem-text-2: rgba(255, 255, 255, 0.58);
+  --sem-text-3: rgba(255, 255, 255, 0.36);
+  --sem-text-sidebar-heading: rgba(255, 255, 255, 0.52);
+
+  --sem-separator: rgba(255, 255, 255, 0.085);
+  --sem-separator-strong: rgba(255, 255, 255, 0.15);
+  --sem-border-control: rgba(255, 255, 255, 0.13);
+
+  --sem-green: #32d74b;  --sem-green-dot: #30d158; --sem-green-soft: rgba(48, 209, 88, 0.17);
+  --sem-red: #ff8078;    --sem-red-dot: #ff453a;   --sem-red-soft: rgba(255, 69, 58, 0.13);
+  --sem-orange: #ffb340; --sem-orange-dot: #ff9f0a; --sem-orange-soft: rgba(255, 159, 10, 0.17);
+  --sem-yellow: #ffd60a; --sem-yellow-dot: #ffd60a; --sem-yellow-soft: rgba(255, 214, 10, 0.11);
+  --sem-purple: #e2a6ff; --sem-purple-dot: #bf5af2; --sem-purple-soft: rgba(191, 90, 242, 0.2);
+  --sem-teal: #5ac8dc;   --sem-teal-dot: #40c8e0;  --sem-teal-soft: rgba(64, 200, 224, 0.17);
+  --sem-gray: #aeaeb3;   --sem-gray-dot: #8e8e93;  --sem-gray-soft: rgba(142, 142, 147, 0.18);
+
+  --sem-shadow-1: 0 0.5px 1px rgba(0, 0, 0, 0.4), 0 0 0 0.5px rgba(255, 255, 255, 0.06);
+  --sem-shadow-2: 0 6px 20px rgba(0, 0, 0, 0.45), 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  --sem-shadow-3: 0 22px 60px rgba(0, 0, 0, 0.6), 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+
+  color-scheme: dark;
+}
+
+/* Windows: the caption buttons (titleBarOverlay) sit on the right of the 44 px title bar area. */
+html[data-platform="win32"] {
+  --sem-traffic-lights: 12px;
+  --sem-caption-buttons: 140px;
+  --sem-toolbar-h: 44px;
+  --sem-font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --sem-font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+}
+html[data-platform="linux"] { --sem-traffic-lights: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --sem-dur-fast: 0ms; --sem-dur: 0ms; --sem-dur-slow: 0ms; }
+}
+@media (prefers-contrast: more) {
+  :root { --sem-separator: rgba(0, 0, 0, 0.3); --sem-text-2: rgba(0, 0, 0, 0.75); --sem-text-3: rgba(0, 0, 0, 0.6); }
+  :root[data-mantine-color-scheme="dark"] { --sem-separator: rgba(255, 255, 255, 0.35); --sem-text-2: rgba(255, 255, 255, 0.78); --sem-text-3: rgba(255, 255, 255, 0.6); }
+}

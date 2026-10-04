@@ -1,0 +1,54 @@
+/* Local layout helpers for the hub Access Lists, Source IP Control, Cascade Connections and SecureNAT pages.
+   Tokens only (docs/desktop-design.md §3); nothing here overrides design-system components. */
+
+/* Segmented view switcher under a page header / at the top of a sheet */
+.hpn-switcher { display: flex; justify-content: flex-start; margin: 4px 0 2px; }
+.hpn-switcher[data-full] { display: block; margin: 2px 0 4px; }
+/* Tabbed sheets keep one height so the sheet doesn't jump when switching tabs */
+.hpn-tabbed { min-height: 430px; }
+.sem-sheet-body .hpn-tabbed > .sem-form-section:first-of-type { margin-top: 14px; }
+.hpn-switcher .mantine-SegmentedControl-root { min-width: 0; }
+.hpn-switcher .mantine-SegmentedControl-label { padding-inline: 12px; }
+.hpn-seg-label { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.hpn-seg-alert { width: 6px; height: 6px; border-radius: 999px; background: var(--sem-red-dot); flex: none; }
+.hpn-seg-count { color: var(--sem-text-2); font-variant-numeric: tabular-nums; }
+
+/* Several controls on one FormRow */
+.hpn-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 8px; width: 100%; align-items: start; }
+.hpn-fields > * { min-width: 0; }
+.hpn-hint { font-size: var(--sem-fz-small); color: var(--sem-text-2); }
+.hpn-range { display: flex; align-items: center; gap: 6px; width: 100%; }
+.hpn-range > .mantine-InputWrapper-root, .hpn-range > .mantine-NumberInput-root, .hpn-range > .mantine-TextInput-root { flex: 1; min-width: 0; }
+.hpn-range-sep { color: var(--sem-text-2); flex: none; }
+.hpn-range[data-fixed] > * { flex: none; }
+
+/* Sheet footer: note on the left, buttons on the right */
+.hpn-footer { display: flex; align-items: center; gap: 12px; width: 100%; }
+.hpn-footer-note { flex: 1; min-width: 0; font-size: var(--sem-fz-small); color: var(--sem-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hpn-footer-note[data-error] { color: var(--sem-red); }
+.hpn-footer-buttons { display: flex; gap: 8px; flex: none; }
+
+/* Header meta separators */
+.hpn-sep { color: var(--sem-text-3); }
+
+/* Rule endpoint text in tables: address in mono, qualifiers in secondary colour */
+.hpn-ep { display: inline-flex; gap: 6px; align-items: baseline; min-width: 0; }
+.hpn-ep-any { color: var(--sem-text-2); }
+.hpn-options { display: inline-flex; gap: 4px; flex-wrap: nowrap; }
+
+/* A file / certificate slot in a form row */
+.hpn-file { display: flex; align-items: center; gap: 8px; width: 100%; flex-wrap: wrap; }
+.hpn-file-info { display: flex; flex-direction: column; min-width: 0; flex: 1; }
+.hpn-file-name { font-weight: var(--sem-fw-medium); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hpn-file-detail { font-size: var(--sem-fz-small); color: var(--sem-text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Static route editor (SecureNAT DHCP classless routes) */
+.hpn-routes { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+.hpn-routes-head, .hpn-routes-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr) 26px; gap: 6px; align-items: start; }
+.hpn-routes-head { font-size: var(--sem-fz-caption); font-weight: var(--sem-fw-semibold); color: var(--sem-text-2); padding: 0 2px; }
+.hpn-routes-foot { display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; }
+.hpn-routes-preview { font-size: var(--sem-fz-small); color: var(--sem-text-2); min-width: 0; overflow-wrap: anywhere; }
+
+/* Space between a view switcher / callouts and the next block */
+.hpn-block { margin-top: 14px; }
+.hpn-callouts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
