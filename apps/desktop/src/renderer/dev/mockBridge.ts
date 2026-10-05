@@ -245,7 +245,7 @@ export function installMockBridge() {
   const menuListeners = new Set<(a: string) => void>();
   const appInfo: AppInfo = {
     version: "1.0.0", platform: params.get("platform") ?? "darwin", arch: "arm64", electron: "44.4.5", node: "24.21.0",
-    dataDir: params.get("platform") === "win32" ? "C:\\Users\\you\\AppData\\Roaming\\SoftEther Manager" : "/Users/you/Library/Application Support/SoftEther Manager",
+    dataDir: params.get("platform") === "win32" ? "C:\\Users\\you\\AppData\\Roaming\\Server Manager for SoftEther VPN" : "/Users/you/Library/Application Support/Server Manager for SoftEther VPN",
   };
   const wait = <T>(v: T) => new Promise<T>((res) => setTimeout(() => res(v), delay));
   const bridge: SemBridge = {

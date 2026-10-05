@@ -37,7 +37,7 @@ await build({
 // Placeholder renderer: an external script (allowed by script-src 'self') and an inline one (must be blocked by the CSP).
 mkdirSync(path.join(out, "renderer"), { recursive: true });
 writeFileSync(path.join(out, "renderer/index.html"), `<!doctype html>
-<html><head><meta charset="utf-8"><title>SoftEther Manager (core smoke)</title></head>
+<html><head><meta charset="utf-8"><title>Server Manager for SoftEther VPN (core smoke)</title></head>
 <body><h1>core smoke</h1><script src="./app.js"></script><script>window.__inlineRan = true;</script></body></html>
 `);
 // eval must be tested from page script: DevTools' Runtime.evaluate bypasses CSP eval checks by default.

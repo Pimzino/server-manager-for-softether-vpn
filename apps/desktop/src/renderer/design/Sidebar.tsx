@@ -173,7 +173,7 @@ export function Sidebar() {
       <div className="sem-sidebar-head sem-drag">
         <div className="sem-sidebar-brand">
           <img src={appIcon} alt="" width={18} height={18} />
-          <span>SoftEther Manager</span>
+          <span>Server Manager</span>
         </div>
         <div className="sem-sidebar-head-actions">
           <ToolbarButton icon={<IconLayoutSidebar size={17} stroke={1.5} />} label="Hide Sidebar" shortcut={["mod", "alt", "S"]} onClick={shell.toggleSidebar} testId="toggle-sidebar" />

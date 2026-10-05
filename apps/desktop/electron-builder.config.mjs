@@ -1,4 +1,4 @@
-// electron-builder 26.15.3 configuration for SoftEther Manager (macOS + Windows, all built on macOS).
+// electron-builder 26.15.3 configuration for Server Manager for SoftEther VPN (macOS + Windows, all built on macOS).
 //
 // Normally driven by scripts/dist.mjs, which stages the app (package.json + dist/**) on the system temp volume and
 // passes { appDir, outDir } here. It also works with the CLI, e.g.
@@ -25,9 +25,9 @@ const projectDir = import.meta.dirname;
 const repoRoot = path.resolve(projectDir, "../..");
 
 export const APP_ID = "com.softethermanager.desktop";
-export const PRODUCT_NAME = "SoftEther Manager";
+export const PRODUCT_NAME = "Server Manager for SoftEther VPN";
 /** File-name stem for artifacts (no spaces, so the names are safe in URLs and shell commands). */
-export const ARTIFACT_STEM = "SoftEther-Manager";
+export const ARTIFACT_STEM = "Server-Manager-for-SoftEther-VPN";
 
 export function electronVersion() {
   return JSON.parse(readFileSync(path.join(repoRoot, "node_modules/electron/package.json"), "utf8")).version;
@@ -55,7 +55,7 @@ export function createConfig(opts = {}) {
   return {
     appId: APP_ID,
     productName: PRODUCT_NAME,
-    copyright: `Copyright © ${year} SoftEther Manager contributors`,
+    copyright: `Copyright © ${year} Server Manager for SoftEther VPN contributors`,
     electronVersion: electronVersion(),
     directories: {
       ...(opts.appDir ? { app: opts.appDir } : {}),
@@ -107,7 +107,7 @@ export function createConfig(opts = {}) {
       notarize,
       extendInfo: {
         // macOS 15+ local network privacy: SoftEther servers are often on the LAN.
-        NSLocalNetworkUsageDescription: "SoftEther Manager connects to SoftEther VPN Servers on your local network to manage them.",
+        NSLocalNetworkUsageDescription: "Server Manager connects to SoftEther VPN Servers on your local network to manage them.",
       },
     },
     dmg: {
@@ -128,7 +128,7 @@ export function createConfig(opts = {}) {
       icon: path.join(projectDir, "build/icon.ico"),
       target: ["dir", "zip", "nsis"],
       artifactName: `${ARTIFACT_STEM}-\${version}-win-\${arch}.\${ext}`,
-      legalTrademarks: "SoftEther is a trademark of SoftEther Corporation. SoftEther Manager is not affiliated with it.",
+      legalTrademarks: "SoftEther is a trademark of SoftEther Corporation. This product is an independent project, not affiliated with or endorsed by it.",
       requestedExecutionLevel: "asInvoker",
       signAndEditExecutable: true,
     },

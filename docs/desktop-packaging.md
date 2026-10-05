@@ -1,4 +1,4 @@
-# SoftEther Manager desktop: packaging and installers
+# Server Manager for SoftEther VPN desktop: packaging and installers
 
 Every installer, for macOS and for Windows, is built **on a Mac**. You do not need a Windows machine, Wine, or a
 virtual machine. One command builds the app, packages it, builds the MSI, checks every artifact, and writes a
@@ -19,11 +19,11 @@ and every check that ran with its result. `release/SHA256SUMS` can be checked wi
 
 | File | What it is |
 |---|---|
-| `SoftEther-Manager-<v>-mac-arm64.dmg` / `-mac-x64.dmg` | Disk image with a styled window (HiDPI background, volume icon) and an `Applications` link |
-| `SoftEther-Manager-<v>-mac-arm64.zip` / `-mac-x64.zip` | The `.app` bundle, zipped with symlinks preserved |
-| `SoftEther-Manager-<v>-win-x64-setup.exe` / `-win-arm64-setup.exe` | NSIS installer (assisted: per-user or all-users, directory choice, Start-menu and desktop shortcuts) |
-| `SoftEther-Manager-<v>-win-x64.zip` / `-win-arm64.zip` | Portable build (no installer) |
-| `SoftEther-Manager-<v>-win-x64.msi` | Per-machine MSI for managed deployment (Intune, GPO, SCCM) |
+| `Server-Manager-for-SoftEther-VPN-<v>-mac-arm64.dmg` / `-mac-x64.dmg` | Disk image with a styled window (HiDPI background, volume icon) and an `Applications` link |
+| `Server-Manager-for-SoftEther-VPN-<v>-mac-arm64.zip` / `-mac-x64.zip` | The `.app` bundle, zipped with symlinks preserved |
+| `Server-Manager-for-SoftEther-VPN-<v>-win-x64-setup.exe` / `-win-arm64-setup.exe` | NSIS installer (assisted: per-user or all-users, directory choice, Start-menu and desktop shortcuts) |
+| `Server-Manager-for-SoftEther-VPN-<v>-win-x64.zip` / `-win-arm64.zip` | Portable build (no installer) |
+| `Server-Manager-for-SoftEther-VPN-<v>-win-x64.msi` | Per-machine MSI for managed deployment (Intune, GPO, SCCM) |
 | `win-unpacked/`, `win-arm64-unpacked/` | electron-builder `dir` output (the app folder the zip, NSIS and MSI are made from) |
 | `verification/` | Screenshots of the packaged app, the generated WiX source, MSI table dumps, PE resource dumps, per-platform JSON results, logs |
 
@@ -90,7 +90,7 @@ A run removes only the artifacts it rebuilds. For example, `dist:mac` keeps the 
 So `installer/msi.mjs` walks `win-unpacked` and writes one component per file. Component GUIDs are derived from the
 UpgradeCode and the file's relative path, so they stay the same across builds.
 
-* Installs per machine to `C:\Program Files\SoftEther Manager\` (`INSTALLDIR`), 64-bit (`Template x64;1033`,
+* Installs per machine to `C:\Program Files\Server Manager for SoftEther VPN\` (`INSTALLDIR`), 64-bit (`Template x64;1033`,
   schema 500).
 * Adds a Start-menu shortcut, and a desktop shortcut unless `DESKTOPSHORTCUT=0`. Both shortcuts carry
   `System.AppUserModel.ID = com.softethermanager.desktop` (the `MsiShortcutProperty` table, added with
@@ -111,14 +111,14 @@ UpgradeCode and the file's relative path, so they stay the same across builds.
 Silent install, upgrade and uninstall:
 
 ```bat
-msiexec /i SoftEther-Manager-1.0.0-win-x64.msi /qn
-msiexec /i SoftEther-Manager-1.0.0-win-x64.msi /qn DESKTOPSHORTCUT=0 INSTALLDIR="D:\Apps\SoftEther Manager\"
-msiexec /i SoftEther-Manager-1.1.0-win-x64.msi /qn          :: upgrades in place
-msiexec /x SoftEther-Manager-1.1.0-win-x64.msi /qn          :: or /x {ProductCode} (see BUILD-REPORT / msiinfo)
+msiexec /i Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi /qn
+msiexec /i Server-Manager-for-SoftEther-VPN-1.0.0-win-x64.msi /qn DESKTOPSHORTCUT=0 INSTALLDIR="D:\Apps\Server Manager for SoftEther VPN\"
+msiexec /i Server-Manager-for-SoftEther-VPN-1.1.0-win-x64.msi /qn          :: upgrades in place
+msiexec /x Server-Manager-for-SoftEther-VPN-1.1.0-win-x64.msi /qn          :: or /x {ProductCode} (see BUILD-REPORT / msiinfo)
 msiexec /i ... /qn /l*v install.log                          :: verbose log
 ```
 
-User data (`%APPDATA%\SoftEther Manager`) is kept on uninstall by both the MSI and the NSIS installer. The NSIS
+User data (`%APPDATA%\Server Manager for SoftEther VPN`) is kept on uninstall by both the MSI and the NSIS installer. The NSIS
 installer and the MSI are separate products. Install one or the other, not both.
 
 ## Signing and notarization
@@ -130,7 +130,7 @@ No Apple Developer ID is available here, so the default build is **ad-hoc signed
 The hardened runtime is **off** for ad-hoc builds. Ad-hoc code has no Team ID, so library validation under the
 hardened runtime would reject Electron's own frameworks. Gatekeeper rejects ad-hoc apps that are downloaded
 (quarantined). Users must right-click the app and choose Open, or run
-`xattr -dr com.apple.quarantine "/Applications/SoftEther Manager.app"`. A copy built on the same Mac is not
+`xattr -dr com.apple.quarantine "/Applications/Server Manager for SoftEther VPN.app"`. A copy built on the same Mac is not
 quarantined.
 
 To ship properly, add a Developer ID. No code changes are needed, only environment variables:
@@ -166,7 +166,7 @@ export SEM_WIN_TIMESTAMP_URL=http://timestamp.digicert.com   # default; set it e
 pnpm run dist:win
 ```
 
-On macOS, electron-builder signs `SoftEther Manager.exe`, the NSIS installer, its uninstaller, and every other `.exe`
+On macOS, electron-builder signs `Server Manager for SoftEther VPN.exe`, the NSIS installer, its uninstaller, and every other `.exe`
 in the app with `osslsigncode`. The config pins `toolsets.winCodeSign: "1.1.0"` so the downloaded osslsigncode (2.11)
 runs natively on Apple silicon. `dist.mjs` then signs the MSI with the same osslsigncode and certificate.
 
@@ -178,7 +178,7 @@ which runs the real binary with `</dev/null`. If you call electron-builder direc
 wrapper.
 
 When a certificate is set, the checks require every file to be signed: they run `osslsigncode verify` on
-`SoftEther Manager.exe`, the setup and the MSI, record the signer, and require the digest to match. When no
+`Server Manager for SoftEther VPN.exe`, the setup and the MSI, record the signer, and require the digest to match. When no
 certificate is set, the checks require the files to be unsigned. The whole path was run on this Mac with a
 self-signed test certificate: the exe, setup and MSI were all signed and verified. Notes:
 
@@ -235,7 +235,7 @@ Every check runs on every build unless you pass `--no-verify`. The results are i
     `--inspect` fuse is off, which is why the check attaches over CDP instead.
   * `spctl` (informational for ad-hoc builds).
 * **Windows, per architecture**
-  * `SoftEther Manager.exe` is parsed with `resedit`:
+  * `Server Manager for SoftEther VPN.exe` is parsed with `resedit`:
     * PE machine type (`0x8664` for x64, `0xAA64` for arm64);
     * version strings (`ProductName`, `FileVersion`, `ProductVersion`, `CompanyName`, `LegalCopyright`) and the
       fixed version;
@@ -278,7 +278,7 @@ Every check runs on every build unless you pass `--no-verify`. The results are i
 The launch check in `dist.mjs` only proves the window loads. This one proves the packaged app works against a real
 server:
 
-1. Extracts `release/SoftEther-Manager-<v>-mac-<arch>.zip` with `ditto` (the shipped file, not the staging copy)
+1. Extracts `release/Server-Manager-for-SoftEther-VPN-<v>-mac-<arch>.zip` with `ditto` (the shipped file, not the staging copy)
    and runs `codesign --verify --deep --strict` on it.
 2. Starts a throwaway `vpnserver` from `SE_BUILD_DIR` (default `~/se-build/src/build`) in `~/se-desk-release`, in its
    own process group, with one listener on port 16201, and sets an administrator password over JSON-RPC.
@@ -297,16 +297,19 @@ server:
 
 ## Icons
 
-`build/icons/generate.mjs` (`pnpm run icons`) renders the vector sources with Playwright's Chromium and writes:
+`build/icons/generate.mjs` (`pnpm run icons`) draws everything in code with `build/icons/raster.mjs`, a small
+dependency-free renderer (distance-field shapes, OKLab gradients, TrueType outlines, PNG encoder). There are no
+vector sources and no browser is involved. It needs macOS (`iconutil`, and Avenir Next for the DMG text) and writes:
 
 * `build/icon.png`: 1024 px, macOS Big Sur grid (an 824 px squircle plate with a drop shadow).
 * `build/icon.icns`: 16 to 1024 px, made with `iconutil`.
-* `build/icon.ico`: 16, 20, 24, 32, 40, 48, 64, 96 and 128 px as 32-bit BMP, and 256 px as PNG.
+* `build/icon.ico`: 16, 20, 24, 32, 40, 48, 64, 96 and 128 px as 32-bit BMP, and 256 px as PNG. The Windows
+  variant has no outer shadow and a plate that nearly fills the canvas.
 * `build/background.png` and `background@2x.png`: the DMG window.
+* `src/renderer/assets/app-icon.png`: the 256 px icon shown inside the app.
 
-The motif (a white shield with a check, on blue) follows the original `Icon/Icon.ProductIcon.ico`. That file's
-largest image is 256 px and full-bleed, which is too small and the wrong shape for macOS. The SVG sources are
-saved next to the script (`icon-mac.svg`, `icon-win.svg`, `dmg-background.svg`).
+The mark is a hub: a hexagonal frame with three links meeting at a centre node, amber on charcoal. Each icon is
+drawn once at 1024 px and area-averaged down in linear light for the smaller sizes.
 
 ## Files
 

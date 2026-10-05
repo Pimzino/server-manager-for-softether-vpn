@@ -1,4 +1,4 @@
-// Windows MSI of SoftEther Manager itself, built on macOS/Linux with msitools' `wixl` (WiX 3 schema subset).
+// Windows MSI of Server Manager for SoftEther VPN itself, built on macOS/Linux with msitools' `wixl` (WiX 3 schema subset).
 //
 // Input is electron-builder's win-unpacked directory. `heat` does not exist for wixl (wixl-heat is a minimal
 // stdin filter with random GUIDs), so the Directory/Component/File tree is generated here, with component GUIDs
@@ -6,13 +6,13 @@
 // component rules intact across versions.
 //
 // Product layout:
-//   * per-machine install to  [ProgramFiles64Folder]SoftEther Manager\   (INSTALLDIR, can be overridden on the command line)
-//   * Start-menu shortcut "SoftEther Manager" (always) and a desktop shortcut (DESKTOPSHORTCUT=1 by default, 0 to skip)
+//   * per-machine install to  [ProgramFiles64Folder]Server Manager for SoftEther VPN\   (INSTALLDIR, can be overridden on the command line)
+//   * Start-menu shortcut "Server Manager for SoftEther VPN" (always) and a desktop shortcut (DESKTOPSHORTCUT=1 by default, 0 to skip)
 //   * Add/Remove Programs entry with the app icon (ARPPRODUCTICON), no Modify button
 //   * MajorUpgrade with a fixed UpgradeCode: installing a newer (or rebuilt same-version) MSI replaces the old one
 //     in place; installing an older one is refused
-//   * silent:   msiexec /i SoftEther-Manager-<v>-win-x64.msi /qn [DESKTOPSHORTCUT=0] [INSTALLDIR="D:\Apps\SEM\"]
-//               msiexec /x SoftEther-Manager-<v>-win-x64.msi /qn        (or /x {ProductCode})
+//   * silent:   msiexec /i Server-Manager-for-SoftEther-VPN-<v>-win-x64.msi /qn [DESKTOPSHORTCUT=0] [INSTALLDIR="D:\Apps\SEM\"]
+//               msiexec /x Server-Manager-for-SoftEther-VPN-<v>-win-x64.msi /qn        (or /x {ProductCode})
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync, copyFileSync } from "node:fs";
@@ -23,9 +23,9 @@ const run = promisify(execFile);
 
 /** Never change: MajorUpgrade finds earlier installs through it. */
 export const UPGRADE_CODE = "CACB4190-26D2-438C-B7C6-EBEB624B0B54";
-export const MANUFACTURER = "SoftEther Manager";
-export const MAIN_EXE = "SoftEther Manager.exe";
-export const INSTALL_FOLDER = "SoftEther Manager";
+export const MANUFACTURER = "Server Manager for SoftEther VPN";
+export const MAIN_EXE = "Server Manager for SoftEther VPN.exe";
+export const INSTALL_FOLDER = "Server Manager for SoftEther VPN";
 
 const xml = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 

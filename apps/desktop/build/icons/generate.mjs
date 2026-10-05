@@ -1,124 +1,83 @@
-// Generates the app icons and the DMG background from vector sources, using Playwright's Chromium to rasterise.
+// Generates the app icons and the DMG background. Everything is drawn in code by raster.mjs (distance-field
+// shapes, OKLab gradients, TrueType outlines): there are no vector sources and no browser involved.
 //
-//   node build/icons/generate.mjs        (or: pnpm run icons)
+//   node build/icons/generate.mjs        (or: pnpm run icons)      macOS only (iconutil, Avenir Next system font)
 //
-// Outputs (committed, consumed by electron-builder and the MSI):
+// Outputs (committed, consumed by electron-builder, the MSI and the renderer):
 //   build/icon.png            1024x1024 macOS-style icon (Big Sur grid: 824px squircle plate + shadow on a 1024 canvas)
 //   build/icon.icns           macOS icon set 16..1024 (iconutil)
 //   build/icon.ico            Windows icon: 16, 20, 24, 32, 40, 48, 64, 96, 128 as 32-bit BMP + 256 as PNG
 //   build/background.png      DMG window background 540x380, plus background@2x.png (1080x760); dmg-builder merges them
-//   build/icons/icon-mac.svg, icon-win.svg, dmg-background.svg   the vector sources that were rendered
+//   src/renderer/assets/app-icon.png   256px icon shown in the sidebar, the welcome page and Preferences
 //
-// The motif (white shield + check on blue) follows the original product icon in /Icon/Icon.ProductIcon.ico, whose
-// largest image is only 256px and full-bleed, which is too small and the wrong shape for macOS.
-import { chromium } from "@playwright/test";
+// The mark is a hub: a hexagonal frame with three links meeting at a centre node (a SoftEther Virtual Hub and the
+// servers joined to it), amber on charcoal.
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync, copyFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {
+  Canvas, Font, box, circle, clamp, grain, grow, hex, intersect, linear, polygon, ring, segment, smooth, solid, squircle, text, union,
+} from "./raster.mjs";
 
 const buildDir = path.resolve(import.meta.dirname, "..");
-const iconsDir = import.meta.dirname;
+const PRODUCT = "Server Manager for SoftEther VPN";
+const C = 512;
+const polar = (r, deg) => [C + r * Math.cos((deg * Math.PI) / 180), C + r * Math.sin((deg * Math.PI) / 180)];
 
-/** Superellipse ("squircle") path centred at (c,c) with half-size r, exponent n. */
-function squircle(c, r, n = 5, steps = 256) {
-  const pts = [];
-  for (let i = 0; i < steps; i++) {
-    const t = (i / steps) * Math.PI * 2;
-    const ct = Math.cos(t), st = Math.sin(t);
-    const x = c + r * Math.sign(ct) * Math.abs(ct) ** (2 / n);
-    const y = c + r * Math.sign(st) * Math.abs(st) ** (2 / n);
-    pts.push(`${x.toFixed(2)},${y.toFixed(2)}`);
-  }
-  return `M${pts.join("L")}Z`;
-}
-
-/** variant "mac": Big Sur grid (plate 824/1024 with drop shadow). "win": plate fills the canvas, no outer shadow. */
-function iconSvg(variant) {
+/**
+ * Draws the icon on a 1024 design grid whose plate is a squircle of half-size 412.
+ * variant "mac": that plate with a drop shadow (Big Sur grid). "win": no outer shadow and a squarer plate; the
+ * canvas is zoomed so the plate fills it (see winCanvas).
+ */
+function drawIcon(cv, variant) {
   const mac = variant === "mac";
-  const plateR = mac ? 412 : 492;
-  const k = plateR / 412; // the artwork is drawn for the mac plate and scaled for the Windows one
-  const plate = squircle(512, plateR, mac ? 5 : 4.2);
-  const art = `
-    <g transform="translate(512 512) scale(${k.toFixed(4)}) translate(-512 -512)">
-      <path d="M512 244 C452 290 386 311 316 313 L316 518 C316 650 398 742 512 796 C626 742 708 650 708 518 L708 313 C638 311 572 290 512 244 Z"
-            fill="url(#shield)" filter="url(#shieldShadow)"/>
-      <path d="M512 244 C452 290 386 311 316 313 L316 518 C316 650 398 742 512 796 Z" fill="#FFFFFF" opacity="0.35"/>
-      <path d="M414 522 L488 596 L616 454" fill="none" stroke="url(#check)" stroke-width="60" stroke-linecap="round" stroke-linejoin="round"/>
-    </g>`;
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#4BA3FF"/>
-      <stop offset="0.55" stop-color="#2A7DEB"/>
-      <stop offset="1" stop-color="#1656CC"/>
-    </linearGradient>
-    <radialGradient id="gloss" cx="0.5" cy="0" r="0.9">
-      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.28"/>
-      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
-    </radialGradient>
-    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#DCE8FF"/>
-    </linearGradient>
-    <linearGradient id="check" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#3A8BFA"/>
-      <stop offset="1" stop-color="#1552C6"/>
-    </linearGradient>
-    <filter id="plateShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.30"/>
-    </filter>
-    <filter id="shieldShadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0A2F7A" flood-opacity="0.35"/>
-    </filter>
-  </defs>
-  <path d="${plate}" fill="url(#plate)"${mac ? ` filter="url(#plateShadow)"` : ""}/>
-  <path d="${plate}" fill="url(#gloss)"/>
-  <path d="${plate}" fill="none" stroke="#0B3F9E" stroke-opacity="0.25" stroke-width="2"/>${art}
-</svg>
-`;
+  const PLATE = squircle(C, C, 412, mac ? 5 : 4.2);
+  const inPlate = (x, y) => clamp(0.5 - PLATE(x, y) * cv.s);
+  if (mac) cv.shadow(PLATE, "#000000", { dy: 18, blur: 34, opacity: 0.38 });
+  const body = linear(200, 100, 820, 940, [[0, "#343946"], [1, "#14161b"]]);
+  cv.fill(PLATE, (x, y) => { const c = body(x, y), n = grain(x, y) * 0.012; return [c[0] + n, c[1] + n, c[2] + n]; });
+  // warm glow behind the mark
+  const glow = hex("#ff9d1c");
+  cv.shade((x, y) => [glow[0], glow[1], glow[2], 0.2 * (1 - smooth(60, 430, Math.hypot(x - C, y - C))) * inPlate(x, y)]);
+  // light from the top left, a rim light on the top edge and a shade on the bottom edge
+  cv.shade((x, y) => [1, 1, 1, 0.012 * (1 - smooth(90, 560, y + (x - C) * 0.25)) * inPlate(x, y)]);
+  cv.shade((x, y) => {
+    const d = PLATE(x, y);
+    if (d > 0.5 || d < -5) return null;
+    const edge = smooth(-5, -1.5, d) * inPlate(x, y), top = (C - y) / 412;
+    return top > 0 ? [1, 1, 1, edge * 0.34 * clamp(top)] : [0, 0, 0, edge * 0.26 * clamp(-top)];
+  });
+
+  const hexagon = [0, 1, 2, 3, 4, 5].map((i) => polar(262 * 0.9, -90 + i * 60));
+  const frame = ring(polygon(hexagon, 26), 44);
+  const arms = [0, 1, 2].map((i) => segment(C, C, ...polar(250, -90 + i * 120), 40));
+  const amber = linear(260, 220, 760, 820, [[0, "#ffd45e"], [0.5, "#ffae1f"], [1, "#ff7a1a"]]);
+  const mark = union(frame, ...arms);
+  cv.shadow(intersect(mark, grow(PLATE, -6)), "#000000", { dy: 10, blur: 18, opacity: 0.5 });
+  cv.fill(mark, amber);
+  // nodes: dark sockets with amber cores read as joints
+  for (const [x, y, r] of [[C, C, 74], ...[0, 1, 2].map((i) => [...polar(262, -90 + i * 120), 54])]) {
+    cv.fill(circle(x, y, r), amber);
+    cv.fill(circle(x, y, r - 20), solid("#1a1c22"));
+    cv.fill(circle(x, y, r - 36), linear(x - r, y - r, x + r, y + r, [[0, "#ffe08a"], [1, "#ff9a1a"]]));
+  }
+}
+/** 1024px canvas zoomed about the centre so the 412 plate becomes 492 (it nearly fills a Windows icon) */
+function winCanvas() {
+  const k = 492 / 412;
+  return new Canvas(1024, 1024, k, C / k - C, C / k - C);
 }
 
-function dmgBackgroundSvg() {
+function drawDmgBackground(cv) {
   // 540x380 logical; app icon at (140,190) and the Applications link at (400,190) (see electron-builder.config.mjs)
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="540" height="380" viewBox="0 0 540 380">
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#F7FAFF"/>
-      <stop offset="1" stop-color="#E6EEFA"/>
-    </linearGradient>
-  </defs>
-  <rect width="540" height="380" fill="url(#bg)"/>
-  <text x="270" y="58" text-anchor="middle" font-family="-apple-system, 'SF Pro Display', 'Helvetica Neue', Arial, sans-serif"
-        font-size="20" font-weight="600" fill="#1C2B45">SoftEther Manager</text>
-  <text x="270" y="84" text-anchor="middle" font-family="-apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif"
-        font-size="13" fill="#51607A">Drag the app into the Applications folder to install it</text>
-  <g fill="none" stroke="#7F9CC8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M222 190 H316"/>
-    <path d="M300 174 L318 190 L300 206"/>
-  </g>
-  <text x="270" y="352" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif"
-        font-size="11" fill="#8A97AD">Manage SoftEther VPN Servers from macOS and Windows</text>
-</svg>
-`;
-}
-
-/** Render an SVG at the given pixel sizes; returns { png: Buffer, rgba: Buffer } per size. */
-async function rasterise(page, svg, width, height) {
-  return page.evaluate(async ({ svg, width, height }) => {
-    const img = new Image();
-    img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg)));
-    await img.decode();
-    const c = document.createElement("canvas");
-    c.width = width; c.height = height;
-    const ctx = c.getContext("2d");
-    ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(img, 0, 0, width, height);
-    const rgba = ctx.getImageData(0, 0, width, height).data;
-    let bin = "";
-    for (let i = 0; i < rgba.length; i += 0x8000) bin += String.fromCharCode.apply(null, rgba.subarray(i, i + 0x8000));
-    return { png: c.toDataURL("image/png").split(",")[1], rgba: btoa(bin) };
-  }, { svg, width, height }).then((r) => ({ png: Buffer.from(r.png, "base64"), rgba: Buffer.from(r.rgba, "base64") }));
+  const AVENIR = "/System/Library/Fonts/Avenir Next.ttc";
+  const demi = new Font(AVENIR, 2), regular = new Font(AVENIR, 7);
+  cv.fill(box(270, 190, 270, 190), linear(0, 0, 0, 380, [[0, "#fbfaf7"], [1, "#efece6"]]));
+  text(cv, demi, PRODUCT, 270, 58, 20, "#1c1d22", { align: "center" });
+  text(cv, regular, "Drag the app into the Applications folder to install it", 270, 84, 13, "#5d5f68", { align: "center" });
+  cv.fill(union(segment(222, 190, 316, 190, 5), segment(300, 174, 318, 190, 5), segment(300, 206, 318, 190, 5)), solid("#c9a25a"));
+  text(cv, regular, "Manage SoftEther VPN Servers from macOS and Windows", 270, 352, 11, "#93959d", { align: "center" });
 }
 
 /** 32-bit BMP (DIB) icon image: BITMAPINFOHEADER, bottom-up BGRA rows, then an all-zero AND mask. */
@@ -157,48 +116,40 @@ function writeIco(file, images) {
   writeFileSync(file, Buffer.concat([head, ...images.map((im) => im.data)]));
 }
 
-const macSvg = iconSvg("mac");
-const winSvg = iconSvg("win");
-const bgSvg = dmgBackgroundSvg();
-writeFileSync(path.join(iconsDir, "icon-mac.svg"), macSvg);
-writeFileSync(path.join(iconsDir, "icon-win.svg"), winSvg);
-writeFileSync(path.join(iconsDir, "dmg-background.svg"), bgSvg);
-
-const browser = await chromium.launch();
 const tmp = mkdtempSync(path.join(os.tmpdir(), "sem-icons-"));
 try {
-  const page = await browser.newPage();
-  await page.setContent("<!doctype html><html><body></body></html>");
-
-  // macOS: icon.png (1024) + icns
-  const mac1024 = await rasterise(page, macSvg, 1024, 1024);
-  writeFileSync(path.join(buildDir, "icon.png"), mac1024.png);
+  // Each icon is drawn once at 1024 and area-averaged down in linear light for the smaller sizes
+  const mac = new Canvas(1024, 1024, 1);
+  drawIcon(mac, "mac");
+  mac.save(path.join(buildDir, "icon.png"));
+  mac.resized(256, 256).save(path.resolve(buildDir, "../src/renderer/assets/app-icon.png"));
   const iconset = path.join(tmp, "icon.iconset");
   mkdirSync(iconset);
   for (const base of [16, 32, 128, 256, 512]) {
     for (const scale of [1, 2]) {
       const px = base * scale;
-      const r = px === 1024 ? mac1024 : await rasterise(page, macSvg, px, px);
-      writeFileSync(path.join(iconset, `icon_${base}x${base}${scale === 2 ? "@2x" : ""}.png`), r.png);
+      (px === 1024 ? mac : mac.resized(px, px)).save(path.join(iconset, `icon_${base}x${base}${scale === 2 ? "@2x" : ""}.png`));
     }
   }
-  // iconutil runs in the temp dir (APFS); the exFAT project volume would add ._* files to the iconset
+  // iconutil runs in the temp dir (APFS); an exFAT project volume would add ._* files to the iconset
   execFileSync("iconutil", ["-c", "icns", "-o", path.join(tmp, "icon.icns"), iconset]);
   copyFileSync(path.join(tmp, "icon.icns"), path.join(buildDir, "icon.icns"));
 
   // Windows: multi-resolution ico (BMP for <=128 for maximum compatibility, PNG for 256)
-  const images = [];
-  for (const size of [16, 20, 24, 32, 40, 48, 64, 96, 128, 256]) {
-    const r = await rasterise(page, winSvg, size, size);
-    images.push({ size, data: size >= 256 ? r.png : dibEntry(size, r.rgba) });
-  }
-  writeIco(path.join(buildDir, "icon.ico"), images);
+  const win = winCanvas();
+  drawIcon(win, "win");
+  writeIco(path.join(buildDir, "icon.ico"), [16, 20, 24, 32, 40, 48, 64, 96, 128, 256].map((size) => {
+    const r = win.resized(size, size);
+    return { size, data: size >= 256 ? r.png() : dibEntry(size, r.rgba()) };
+  }));
 
   // DMG background (@1x + @2x; dmg-builder combines them into a HiDPI tiff with tiffutil)
-  writeFileSync(path.join(buildDir, "background.png"), (await rasterise(page, bgSvg, 540, 380)).png);
-  writeFileSync(path.join(buildDir, "background@2x.png"), (await rasterise(page, bgSvg, 1080, 760)).png);
+  for (const [scale, name] of [[1, "background.png"], [2, "background@2x.png"]]) {
+    const bg = new Canvas(540 * scale, 380 * scale, scale);
+    drawDmgBackground(bg);
+    bg.save(path.join(buildDir, name));
+  }
 } finally {
-  await browser.close();
   rmSync(tmp, { recursive: true, force: true });
 }
 

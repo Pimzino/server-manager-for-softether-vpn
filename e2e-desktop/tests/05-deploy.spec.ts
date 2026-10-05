@@ -100,7 +100,7 @@ test("per-user and hub-wide .vpn profiles are saved and accepted by the real Sof
 
 test("client package from a placeholder ZIP (stubbed Open dialog)", async ({}, ti) => {
   const hamcore = readFileSync(path.join(SE_BUILD, "hamcore.se2"));
-  const placeholder = (n: string) => Buffer.from(`PLACEHOLDER for ${n} - SoftEther Manager E2E fixture, not an executable\n`, "utf8");
+  const placeholder = (n: string) => Buffer.from(`PLACEHOLDER for ${n} - Server Manager for SoftEther VPN E2E fixture, not an executable\n`, "utf8");
   const zip = buildZip([
     { name: "vpnclient.exe", data: placeholder("vpnclient.exe") },
     { name: "vpncmd.exe", data: placeholder("vpncmd.exe") },
