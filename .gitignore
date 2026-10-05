@@ -25,5 +25,5 @@ apps/desktop/tools/**/artifacts/
 apps/desktop/tools/**/REPORT.md
 apps/desktop/tools/**/report.json
 
-# logo studies: rendered PNGs are regenerated with `node branding/render.mjs`
-branding/out/
+# local logo studies (only the chosen icon is in the repo: apps/desktop/build/icons)
+branding/
