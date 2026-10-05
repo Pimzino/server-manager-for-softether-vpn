@@ -1,0 +1,133 @@
+name: Release
+
+# Packages the desktop app (macOS dmg/zip, Windows NSIS setup/zip/MSI) with apps/desktop/scripts/dist.mjs,
+# which also verifies every artifact, and publishes a draft GitHub release.
+#
+#   release:  bump "version" in apps/desktop/package.json on main, then push the tag v<version>
+#   dry run:  run this workflow manually, or open a PR that touches the packaging files: the
+#             installers are built and verified and kept as a workflow artifact, nothing is published
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - apps/desktop/scripts/**
+      - apps/desktop/installer/**
+      - apps/desktop/build/**
+      - apps/desktop/electron-builder.config.mjs
+      - apps/desktop/package.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # ---------------------------------------------------------------------------------------------
+  ci:
+    name: CI
+    if: github.ref_type == 'tag'
+    uses: ./.github/workflows/ci.yml
+
+  # ---------------------------------------------------------------------------------------------
+  package:
+    name: Package desktop app (macOS and Windows installers)
+    runs-on: macos-26
+    timeout-minutes: 45
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+      - run: corepack enable
+      - name: Version (a release tag must match apps/desktop/package.json)
+        id: version
+        run: |
+          version="$(node -p 'require("./apps/desktop/package.json").version')"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match apps/desktop/package.json version $version (expected v$version)"
+            exit 1
+          fi
+      - name: MSI tools (wixl)
+        run: brew install msitools
+      - run: pnpm install --frozen-lockfile
+      # Windows files (app, setup, MSI) are Authenticode-signed with the project's self-signed certificate when
+      # the secrets are available (not on pull requests from forks). See docs/desktop-packaging.md.
+      - name: Build, package and verify
+        env:
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+          # electron-builder skips all signing on pull requests by default, including the ad-hoc macOS signature
+          # the app needs to start at all. Pull requests from forks get no secrets, so this exposes nothing.
+          CSC_FOR_PULL_REQUEST: true
+        run: |
+          if [ -z "$WIN_CSC_LINK" ]; then unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; fi
+          # --no-cross-launch: the x64 macOS build is verified but not started (Rosetta in the runner VM never
+          # brings Electron up); the arm64 build is started and screenshotted
+          pnpm --filter @sem/desktop run dist --no-cross-launch
+          cp apps/desktop/build/codesign/SoftEther-Manager-codesign.cer apps/desktop/release/
+      - name: Build report
+        if: always()
+        run: cat apps/desktop/release/BUILD-REPORT.md >> "$GITHUB_STEP_SUMMARY" || true
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installers
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.msi
+            apps/desktop/release/*.cer
+            apps/desktop/release/SHA256SUMS
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: build-report
+          path: |
+            apps/desktop/release/BUILD-REPORT.md
+            apps/desktop/release/verification
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
+  release:
+    name: Draft GitHub release
+    if: github.ref_type == 'tag'
+    needs: [ci, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: installers
+          path: installers
+      - name: Verify checksums
+        working-directory: installers
+        run: sha256sum -c SHA256SUMS
+      # Build provenance, verifiable with: gh attestation verify <file> --repo <owner>/<repo>
+      - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        with:
+          subject-checksums: installers/SHA256SUMS
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          flags=()
+          case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
+          gh release create "$GITHUB_REF_NAME" installers/* --draft --verify-tag --generate-notes \
+            --title "SoftEther Manager ${GITHUB_REF_NAME#v}" "${flags[@]}"
