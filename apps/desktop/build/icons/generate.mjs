@@ -9,6 +9,9 @@
 //   build/icon.ico            Windows icon: 16, 20, 24, 32, 40, 48, 64, 96, 128 as 32-bit BMP + 256 as PNG
 //   build/background.png      DMG window background 540x380, plus background@2x.png (1080x760); dmg-builder merges them
 //   src/renderer/assets/app-icon.png   256px icon shown in the sidebar, the welcome page and Preferences
+//   resources/default.ico     fallback icon for the client packages the app builds (MSI, setup.exe) when a template
+//                             has none; a smaller set of sizes because it is embedded in every package. Also copied
+//                             to tools/setup-stub/default.ico, the icon source of the setup.exe launcher stubs.
 //
 // The mark is a hub: a hexagonal frame with three links meeting at a centre node (a SoftEther Virtual Hub and the
 // servers joined to it), amber on charcoal.
@@ -138,10 +141,14 @@ try {
   // Windows: multi-resolution ico (BMP for <=128 for maximum compatibility, PNG for 256)
   const win = winCanvas();
   drawIcon(win, "win");
-  writeIco(path.join(buildDir, "icon.ico"), [16, 20, 24, 32, 40, 48, 64, 96, 128, 256].map((size) => {
+  const icoImages = (sizes) => sizes.map((size) => {
     const r = win.resized(size, size);
     return { size, data: size >= 256 ? r.png() : dibEntry(size, r.rgba()) };
-  }));
+  });
+  writeIco(path.join(buildDir, "icon.ico"), icoImages([16, 20, 24, 32, 40, 48, 64, 96, 128, 256]));
+  const fallback = path.resolve(buildDir, "../resources/default.ico");
+  writeIco(fallback, icoImages([16, 24, 32, 48, 64, 256]));
+  copyFileSync(fallback, path.resolve(buildDir, "../../../tools/setup-stub/default.ico"));
 
   // DMG background (@1x + @2x; dmg-builder combines them into a HiDPI tiff with tiffutil)
   for (const [scale, name] of [[1, "background.png"], [2, "background@2x.png"]]) {

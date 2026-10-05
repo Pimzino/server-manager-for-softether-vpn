@@ -307,6 +307,8 @@ vector sources and no browser is involved. It needs macOS (`iconutil`, and Aveni
   variant has no outer shadow and a plate that nearly fills the canvas.
 * `build/background.png` and `background@2x.png`: the DMG window.
 * `src/renderer/assets/app-icon.png`: the 256 px icon shown inside the app.
+* `resources/default.ico` (copied to `tools/setup-stub/default.ico`): the fallback icon for client packages the
+  app builds when a template has no icon, with fewer sizes because it is embedded in every package.
 
 The mark is a hub: a hexagonal frame with three links meeting at a centre node, amber on charcoal. Each icon is
 drawn once at 1024 px and area-averaged down in linear light for the smaller sizes.
