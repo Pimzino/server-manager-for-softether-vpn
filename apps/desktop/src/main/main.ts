@@ -2,6 +2,7 @@
 // background scheduler. See docs/desktop-architecture.md.
 import { app, BrowserWindow, dialog, Menu, nativeTheme, powerMonitor, session, shell, type MenuItemConstructorOptions } from "electron";
 import type { FastifyInstance } from "fastify";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { CH } from "../shared/ipc.ts";
@@ -20,6 +21,10 @@ const isWin = process.platform === "win32";
 const devServer = process.env.SEM_DEV_SERVER || null;
 const rendererDir = path.resolve(import.meta.dirname, "../renderer");
 const preloadPath = path.resolve(import.meta.dirname, "../preload/preload.cjs");
+// Unpackaged runs (pnpm run dev, electron .) use the stock Electron binary, which carries Electron's own icon:
+// show the app icon in the Dock / taskbar there too. Packaged builds get it from the bundle or the .exe.
+const devIconFile = path.resolve(import.meta.dirname, "../../build/icon.png");
+const devIcon = !app.isPackaged && existsSync(devIconFile) ? devIconFile : null;
 
 app.setName(APP_NAME);
 if (isWin) app.setAppUserModelId("com.softethermanager.desktop");
@@ -113,6 +118,7 @@ function createWindow(): BrowserWindow {
     title: APP_NAME,
     show: false,
     backgroundColor: "#00000000",
+    ...(devIcon && !isMac ? { icon: devIcon } : {}),
     ...(isMac ? {
       titleBarStyle: "hiddenInset" as const,
       trafficLightPosition: { x: 18, y: 18 },
@@ -248,6 +254,7 @@ function shutdown() {
 
 async function start() {
   try {
+    if (devIcon && isMac) app.dock?.setIcon(devIcon);
     initKeystore();
     initDb();
   } catch (e) {
