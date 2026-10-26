@@ -1,11 +1,11 @@
-# SoftEther Manager Desktop: design system and page porting guide
+# SoftEther Manager Desktop: design system and page guide
 
-This is the contract for everything drawn in `apps/desktop/src/renderer`. It covers the principles, the tokens,
-the shared components, layout and state patterns, dangerous-action confirmations, copy, and a step-by-step guide
-for porting a page from `apps/web`. Read it before you write or port a page.
+This is the contract for everything drawn in `src/renderer`. It covers the principles, the tokens,
+the shared components, layout and state patterns, dangerous-action confirmations, copy, and how to add
+a page. Read it before you write a page.
 
 Reference implementation: `pages/server/Overview.tsx` (a server page) and `pages/Fleet.tsx` (a global page).
-Screenshots of every screen of the real app, in light and dark mode, are in `apps/desktop/design-screenshots/final/`.
+Screenshots of every screen of the real app, in light and dark mode, are in `design-screenshots/final/`.
 
 ---
 
@@ -173,7 +173,7 @@ All components live in `src/renderer/design/` and are re-exported from `design/i
 | `SectionGrid` | `columns?: 2 \| 3` | Side-by-side sections; one column under 1080 px. |
 | `PropertyList` | `items?: {label, value, hint?, mono?}[]` or `rows?: [label, value][]`, `labelWidth?` (200), `dense?`, `testId?` | Read-only key/value pairs. Empty values show "–". |
 | `KeyValue` | `rows` | Web-compatible alias of `PropertyList`. |
-| `MetricGrid` / `Metric` | grid: `min?` (column min width, 150); metric: `label`, `value`, `hint?`, `tone?: "red" \| "orange" \| "green"`, `onClick?`, `testId?` | Replaces the web's `StatCard`. A flat strip of numbers, not cards. |
+| `MetricGrid` / `Metric` | grid: `min?` (column min width, 150); metric: `label`, `value`, `hint?`, `tone?: "red" \| "orange" \| "green"`, `onClick?`, `testId?` | A flat strip of numbers, not cards. |
 | `Meter` | `value`, `max`, `label?`, `detail?` | Used / total. Turns orange above 75 % and red above 90 %. No bar when `max` is 0 (not reported); say so in `detail`. |
 | `Mono`, `Dim`, `Shortcut` | `Mono dim?`; `Shortcut keys={["mod","N"]}` | Inline helpers. `Shortcut` renders ⌘N on a Mac and Ctrl+N on Windows. |
 
@@ -208,7 +208,7 @@ All components live in `src/renderer/design/` and are re-exported from `design/i
 | `FormActions` | `dirty`, `valid?`, `saving?`, `onSave`, `onDiscard?`, `saveLabel?`, `note?`, `testId?` | Save bar. It sticks to the bottom of the page only while there are changes (`dirty`); otherwise it sits after the form. For pages that apply many fields in one RPC (hub properties, policies). Settings that map to one call each may apply immediately instead, as Preferences does. |
 | `Sheet` | `opened`, `onClose`, `title`, `subtitle?`, `icon?`, `footer?`, `size?` (560), `busy?` (blocks closing), `closeOnClickOutside?` (false), `testId?` | Modal task dialog that slides from the toolbar. Use it for every create/edit form. The footer holds the buttons: secondary left of primary, primary rightmost. |
 | `Inspector` | `opened`, `onClose`, `title`, `subtitle?`, `icon?`, `actions?`, `width?` (380), `testId?` | Non-modal detail panel on the right: session details, user properties preview. The table stays usable, and selecting another row swaps the content. Esc closes it, unless a dialog, sheet, menu or dropdown is showing (`overlayOpen()`, exported for custom Esc handlers): then that overlay gets the Esc first. Don't add page-level Esc workarounds. |
-| `ConfirmButton` | `title`, `message?`, `onConfirm`, `typeToConfirm?`, `confirmLabel?`, `tone?`, `color?` ("red"), `variant?`, `size?`, `leftSection?`, `testId?` | Drop-in replacement for the web's `ConfirmButton`. The dialog buttons get `${testId}-confirm` and `${testId}-cancel`. |
+| `ConfirmButton` | `title`, `message?`, `onConfirm`, `typeToConfirm?`, `confirmLabel?`, `tone?`, `color?` ("red"), `variant?`, `size?`, `leftSection?`, `testId?` | The dialog buttons get `${testId}-confirm` and `${testId}-cancel`. |
 | `confirmAction(opts)` / `useConfirm()` | `ConfirmOptions` → `Promise<boolean>` | Imperative confirmation. See §6. |
 
 ### States
@@ -340,7 +340,7 @@ There are no roles any more: whoever runs the app is the administrator. Confirma
 | `lib/types.ts` | `Server` (`transport`, `fingerprint`, `passwordSaved`, `unlocked`), `ServerInput`, `ProbeResult`, `TestResult`, `FleetSummary`, `BulkResult`, `AppSettings`, catalog types |
 | `lib/platform.ts` | `platform()`, `isMac()`, `secretStore()` (Keychain/DPAPI wording), `shortcutLabel()` |
 
-**File transfer changed signatures** (the web versions used `<input type=file>` and `<a download>`):
+**File transfer** goes through native dialogs (never `<input type=file>` or `<a download>`):
 
 * `upload<T>(path, { fields?, filters?, title? })` opens the native Open dialog itself and POSTs the chosen file
   as multipart field `file`. It resolves `null` when the user cancels and throws `ApiError` on HTTP errors.
@@ -357,166 +357,16 @@ There are no roles any more: whoever runs the app is the administrator. Confirma
 
 ---
 
-## 10. Page porting guide
+## 10. Adding a page
 
 ### The route registry
 
 `src/renderer/sections.tsx` lists every page: `serverSections`, `hubSections` and `deploySections`. Each entry
 has `path`, `label` (Title Case), `group`, `icon` (a tabler icon *component*), `component`, `hubAdminOk?` and
-`keywords?`.
+`keywords?`. Routes, scope navigation, toolbar menu and quick switcher are generated from these lists.
 
-Unported pages point to `pending("server/Hubs")`, which renders `pages/Pending.tsx`. To ship a page:
-
-1. Create `src/renderer/pages/<scope>/<File>.tsx` with a default export.
-2. Replace **only your line's** `component: pending("…")` with `component: lazy(() => import("./pages/<scope>/<File>"))`.
-3. Don't change path, label, group or icon without updating this guide. Routes, scope navigation, toolbar menu
-   and quick switcher are generated from these lists.
-
-### Mechanical mapping
-
-| apps/web | apps/desktop |
-|---|---|
-| `../../components/common` → `PageHeader`, `Section`, `KeyValue`, `QueryState`, `ErrorAlert`, `OnlineBadge`, `Copyable`, `ConfirmButton`, `Empty` | same names from `../../design` |
-| `../../components/DataTable` | `DataTable` from `../../design` (same props, plus more) |
-| `components/server-a/shared` `StatCard` + `SimpleGrid` | `MetricGrid` + `Metric` |
-| `duration`, `enumLabel`, `fieldDoc` from `server-a/shared` | `duration` in `lib/format`, `enumLabel`/`fieldDoc` in `lib/hooks` |
-| `Card withBorder` / `Paper withBorder` | `Section variant="inset"` or `FormSection`; no free-standing cards |
-| `Modal` for create/edit | `Sheet` with a `footer` |
-| `Alert color="red"` | `ErrorState inline` |
-| informational `Alert` | `.sem-callouts > .sem-callout[data-tone]` (see `Fleet.tsx`) or a `Section` description |
-| `Badge` | `Tag`, or `StatusBadge` for states |
-| `Text fw={600}` in cells | `<span className="sem-strong">` |
-| `Text c="dimmed"` | `<span className="sem-dim">`, or keep `c="dimmed"` |
-| `ff="monospace"` | `Mono`, or `mono: true` on the column |
-| `useServerRole` / `can(role, …)` / `isAdmin &&` | delete: always allowed |
-| `ConfirmButton` + `useRpcMutation` for a danger method | keep `ConfirmButton` and pass `confirm: false` to the mutation, or drop the button and let the mutation confirm |
-| per-row action buttons column | `contextMenu` + `onRowOpen` (+ a `toolbar` for selected rows) |
-| `onRowClick={navigate}` | `onRowOpen={navigate}` plus `selectable="single"` (single click selects, double-click or Enter opens) |
-| `upload(path, file, fields)` + `FileInput` | `upload(path, { fields, filters })` |
-| `download(path)` / `downloadText` | same names, now async with native dialogs |
-| `data-testid` values | keep them: E2E tests reuse them |
-
-### Worked example: `server/Hubs.tsx`
-
-Web version (abridged):
-
-```tsx
-<PageHeader title="Virtual Hubs" description="Each Virtual Hub is an isolated…"
-  actions={isAdmin && <Button leftSection={<IconPlus size={16} />} onClick={() => setCreating(true)}>Create hub</Button>} />
-<QueryState query={hubs}>
-  <DataTable data={hubs.data?.HubList} rowKey={(h) => h.HubName_str} onRowClick={(h) => nav(…)} columns={[
-    …,
-    { key: "actions", title: "", render: (h) => can(role, "operator") && (<Group>
-        <Switch … onChange={(e) => setOnline.mutate(…)} />
-        {isAdmin && <ConfirmButton title={`Delete Virtual Hub ${h.HubName_str}?`} typeToConfirm={h.HubName_str}
-          onConfirm={() => del.mutateAsync({ HubName_str: h.HubName_str })}>Delete</ConfirmButton>}
-      </Group>) },
-  ]} />
-</QueryState>
-<CreateHubModal … />   // Mantine Modal with a Stack of inputs
-```
-
-Desktop version:
-
-```tsx
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { Button, NumberInput, PasswordInput, Switch, TextInput } from "@mantine/core";
-import { IconExternalLink, IconPlus, IconPower, IconStack2, IconTrash } from "@tabler/icons-react";
-import { useRpc, useRpcMutation, useScope, useServer } from "../../lib/hooks";
-import { agoShort, bytes, num, trafficOf } from "../../lib/format";
-import type { HubListItem } from "../../lib/types";
-import { hubBase } from "../../sections";
-import { DataTable, FormRow, FormSection, PageHeader, Sheet, StatusBadge, Tag } from "../../design";
-
-export default function HubsPage() {
-  const { serverId } = useScope();
-  const nav = useNavigate();
-  const server = useServer(serverId);
-  const hubs = useRpc<{ HubList?: HubListItem[] }>(serverId, "EnumHub");
-  const [creating, setCreating] = useState(false);
-  const setOnline = useRpcMutation(serverId, "SetHubOnline", { success: false });
-  const del = useRpcMutation(serverId, "DeleteHub", { success: "Virtual Hub deleted" }); // "danger": confirms itself, typed name
-  const hubMode = !!server.data?.hub;                                                     // roles are gone; only hub-admin mode limits
-
-  return (
-    <>
-      <PageHeader
-        title="Virtual Hubs"
-        description="Each Virtual Hub is an isolated virtual Ethernet segment with its own users and policies."
-        actions={!hubMode && <Button leftSection={<IconPlus size={14} />} onClick={() => setCreating(true)} data-testid="hub-create">Create Hub…</Button>}
-      />
-      <DataTable
-        testId="hubs-table" aria-label="Virtual Hubs"
-        data={hubs.data?.HubList} loading={hubs.isLoading} error={hubs.error} onRetry={() => void hubs.refetch()}
-        rowKey={(h) => h.HubName_str} selectable="single" initialSort={{ key: "HubName_str", dir: "asc" }}
-        onRowOpen={(h) => nav(hubBase(serverId, h.HubName_str))}
-        empty={{ title: "No Virtual Hubs", description: "Create a hub to start accepting VPN connections.", icon: <IconStack2 size={28} stroke={1.4} /> }}
-        contextMenu={(h) => [
-          { label: "Open", icon: <IconExternalLink size={14} />, onClick: () => nav(hubBase(serverId, h.HubName_str)) },
-          { label: h.Online_bool ? "Take Offline" : "Bring Online", icon: <IconPower size={14} />,
-            onClick: () => setOnline.mutate({ HubName_str: h.HubName_str, Online_bool: !h.Online_bool }) },
-          "divider",
-          { label: "Delete Hub…", icon: <IconTrash size={14} />, danger: true, disabled: hubMode,
-            onClick: () => del.mutate({ HubName_str: h.HubName_str }) },
-        ]}
-        columns={[
-          { key: "HubName_str", title: "Name", render: (h) => <span className="sem-strong">{h.HubName_str}</span> },
-          { key: "Online_bool", title: "Status", width: 100, render: (h) => <StatusBadge status={h.Online_bool ? "ok" : "off"}>{h.Online_bool ? "Online" : "Offline"}</StatusBadge> },
-          { key: "HubType_u32", title: "Type", width: 110, render: (h) => <Tag>{["Standalone", "Static", "Dynamic"][h.HubType_u32] ?? h.HubType_u32}</Tag> },
-          { key: "NumUsers_u32", title: "Users", align: "right", width: 70, render: (h) => num(h.NumUsers_u32) },
-          { key: "NumSessions_u32", title: "Sessions", align: "right", width: 80, render: (h) => num(h.NumSessions_u32) },
-          { key: "traffic", title: "Traffic ↓ / ↑", align: "right", width: 150,
-            value: (h) => { const t = trafficOf(h, "Ex."); return t.recv + t.send; },
-            render: (h) => { const t = trafficOf(h, "Ex."); return <span className="sem-num">{bytes(t.recv)} / {bytes(t.send)}</span>; } },
-          { key: "LastCommTime_dt", title: "Last activity", width: 110, render: (h) => <span className="sem-dim">{agoShort(h.LastCommTime_dt)}</span> },
-        ]}
-      />
-      <CreateHubSheet serverId={serverId} opened={creating} onClose={() => setCreating(false)}
-        onCreated={(name) => nav(hubBase(serverId, name))} />
-    </>
-  );
-}
-
-function CreateHubSheet({ serverId, opened, onClose, onCreated }: { serverId: number; opened: boolean; onClose: () => void; onCreated: (n: string) => void }) {
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [maxSession, setMaxSession] = useState(0);
-  const [online, setOnline] = useState(true);
-  const create = useRpcMutation(serverId, "CreateHub", { success: "Virtual Hub created", onSuccess: () => { onClose(); onCreated(name); } });
-  const submit = () => create.mutate({ HubName_str: name.trim(), AdminPasswordPlainText_str: password, Online_bool: online, MaxSession_u32: maxSession, NoEnum_bool: false, HubType_u32: 0 });
-  return (
-    <Sheet opened={opened} onClose={onClose} busy={create.isPending} title="New Virtual Hub" icon={<IconStack2 size={19} stroke={1.5} />}
-      footer={<div className="sem-row-inline" style={{ justifyContent: "flex-end", width: "100%" }}>
-        <Button variant="default" onClick={onClose}>Cancel</Button>
-        <Button onClick={submit} loading={create.isPending} disabled={!name.trim()} data-testid="hub-create-submit">Create Hub</Button>
-      </div>}>
-      <FormSection>
-        <FormRow label="Name" description="Letters, digits, - and _. Not case-sensitive.">{(id) =>
-          <TextInput id={id} value={name} onChange={(e) => setName(e.currentTarget.value)} data-autofocus />}</FormRow>
-        <FormRow label="Hub admin password" description="Optional. Lets someone manage just this hub.">{(id) =>
-          <PasswordInput id={id} value={password} onChange={(e) => setPassword(e.currentTarget.value)} autoComplete="new-password" />}</FormRow>
-        <FormRow label="Maximum sessions" description="0 means no limit.">{(id) =>
-          <NumberInput id={id} w={120} min={0} value={maxSession} onChange={(v) => setMaxSession(Number(v) || 0)} />}</FormRow>
-        <FormRow label="Online"><Switch checked={online} onChange={(e) => setOnline(e.currentTarget.checked)} aria-label="Online" /></FormRow>
-      </FormSection>
-    </Sheet>
-  );
-}
-```
-
-What changed and why:
-
-* **Roles.** `can(role, …)` and `isAdmin` are gone. Only hub-admin mode hides server-wide actions.
-* **Deleting.** It moved to a context menu and relies on the automatic `DeleteHub` confirmation, which requires
-  typing the hub name. There's no action column.
-* **Navigation.** A single click now selects the row; double-click or Enter opens the hub (`onRowOpen`).
-* **States.** `QueryState` became the table's own `loading`/`error`/`empty` props, which gives skeleton rows and
-  an empty state with guidance.
-* **Create.** The `Modal` became a `Sheet` with `FormRow`s. The button names the verb ("Create Hub") and the
-  sheet can't close while the call runs (`busy`).
-* **Formatting.** `Badge`, `Text fw` and `ago` became `Tag`, `sem-strong` and `agoShort`. Traffic uses
-  `trafficOf`.
+1. Create `src/renderer/pages/<scope>/<File>.tsx` with a default export (`pages/server/Hubs.tsx` is a good model).
+2. Add one line to the right list with `component: lazy(() => import("./pages/<scope>/<File>"))`.
 
 ### Checklist before you register a page
 
@@ -528,7 +378,6 @@ What changed and why:
 * [ ] Tables: `aria-label`, `rowKey`, sensible `initialSort`, numbers right-aligned, `onRowOpen` for drill-down.
 * [ ] File import/export goes through `upload`/`download`/`openFile`/`saveFile`, never `<input type=file>` or `<a download>`.
 * [ ] The page works in light and dark mode at 1100 px wide and does both jobs by keyboard alone.
-* [ ] `data-testid`s from the web page are preserved.
 
 ---
 
@@ -538,23 +387,23 @@ What changed and why:
   dev server), `main.tsx` installs a fake bridge.
   * It has five servers: two online, one offline, one locked (password `acme`), and one hub-admin connection.
   * It serves hubs, sessions, users, groups, listeners, connections, caps, settings, fleet summary and bulk RPC,
-    and the real catalog from `@sem/api-catalog`.
+    and the real catalog from `src/shared/catalog`.
   * URL switches: `?empty=1` (first run), `?platform=win32`, `?slow=1`, `?shell=electron`.
     `window.__semMenu("preferences")` simulates a native menu action.
   * It's excluded from production builds (`import.meta.env.DEV`).
-* **Run:** `pnpm exec vite --config apps/desktop/vite.config.ts --port 5291 --host 127.0.0.1`
-* **Real-app screenshots and design checks:** `node apps/desktop/tools/design-polish/run.mjs` builds the app into a
+* **Run:** `pnpm exec vite --config vite.config.ts --port 5291 --host 127.0.0.1`
+* **Real-app screenshots and design checks:** `node scripts/design-polish/run.mjs` builds the app into a
   scratch dir, starts a throwaway vpnserver (port 16011, `~/se-desk-polish`, DDNS off) with realistic data, launches
   the real app with Playwright `_electron`, captures every page, sheet, dialog and inspector in light and dark
   (`design-screenshots/final/`, 1360×880), runs the checks above and the accessibility scan, captures the real
   window with `screencapture -l` (vibrancy included), writes `final/report.json` and kills the server's process
   group. `ROUND=n` also keeps a copy in `final/round-n/`; `ONLY=<regex>` limits the captures.
-* **Screenshots** (36, light and dark, 1360×880): `node apps/desktop/design-screenshots/capture.mjs`. Fails on
+* **Screenshots** (36, light and dark, 1360×880): `node design-screenshots/capture.mjs`. Fails on
   any console error.
-* **Interaction checks** (13 flows against the mock): `node apps/desktop/design-screenshots/flows.mjs` writes
+* **Interaction checks** (13 flows against the mock): `node design-screenshots/flows.mjs` writes
   `flows-report.json`.
 * **Real window chrome** (macOS vibrancy and traffic lights):
-  `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron apps/desktop/design-screenshots/electron/chrome-main.mjs "http://127.0.0.1:5291/?shell=electron#/servers/1" out.png light`
+  `node_modules/electron/dist/Electron.app/Contents/MacOS/Electron design-screenshots/electron/chrome-main.mjs "http://127.0.0.1:5291/?shell=electron#/servers/1" out.png light`
 
 ### Accessibility notes (WCAG 2.1 AA review)
 
@@ -567,7 +416,7 @@ What changed and why:
 * **Disabled buttons.** Grey label (`--sem-text-3`, overriding any inline `c=` colour), no shadow, lighter bezel;
   subtle buttons lose their fill. Mantine's own disabled style lives in a cascade layer and loses to the unlayered
   default-variant rule, which is why components.css restates it.
-* **Automated scan.** `tools/design-polish/run.mjs` checks every captured screen in both schemes: contrast of every
+* **Automated scan.** `scripts/design-polish/run.mjs` checks every captured screen in both schemes: contrast of every
   visible text run against its composited background (1.4.3), accessible names of buttons and links (4.1.2),
   labels of form fields (1.3.1/3.3.2) and image alt text (1.1.1). Results are in `design-screenshots/final/report.json`.
 * **Known deviation.** Input borders are 20 % black (about 2:1). This matches macOS controls, which are also

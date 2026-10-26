@@ -1,29 +1,17 @@
 node_modules/
-dist/
-data/
 *.log
 ._*
 .DS_Store
-vendor/
+*.tsbuildinfo
+# build and packaging output (see docs/desktop-packaging.md)
+dist/
+release/
+design-screenshots/
 e2e/artifacts/
+e2e/.build/
 test-results/
 playwright-report/
-dev.env
-
-# desktop packaging / design working files
-apps/desktop/release/
-apps/desktop/design-screenshots/
-e2e-desktop/artifacts/
-e2e-desktop/.build/
+scripts/**/artifacts/
 Icon/
-apps/desktop/Icon/
 # local-only tooling state
 .claude/
-*.tsbuildinfo
-# output of the page-verification helper scripts (contains machine-specific data)
-apps/desktop/tools/**/artifacts/
-apps/desktop/tools/**/REPORT.md
-apps/desktop/tools/**/report.json
-
-# local logo studies (only the chosen icon is in the repo: apps/desktop/build/icons)
-branding/

@@ -6,13 +6,12 @@ report.
 
 ```sh
 brew install msitools          # wixl, msiinfo, msiextract, msibuild (used for the MSI)
-cd apps/desktop
 pnpm run dist                   # everything
 pnpm run dist:mac               # macOS only
 pnpm run dist:win               # Windows only (with the MSI)
 ```
 
-The result is in `apps/desktop/release/`. `release/BUILD-REPORT.md` lists every artifact with its size and SHA-256,
+The result is in `release/`. `release/BUILD-REPORT.md` lists every artifact with its size and SHA-256,
 and every check that ran with its result. `release/SHA256SUMS` can be checked with `shasum -a 256 -c SHA256SUMS`.
 
 ## Outputs
@@ -65,9 +64,9 @@ A run removes only the artifacts it rebuilds. For example, `dist:mac` keeps the 
 2. **Stage.** A clean copy of the app goes to `<staging>/app`. It holds only `dist/**` (no source maps, no `._*`
    AppleDouble files) and a minimal `package.json` with no dependencies. electron-builder reads this copy (a
    two-package.json layout) and writes to `<staging>/out` on APFS, so nothing from `node_modules` is shipped.
-   `apps/desktop/resources/` is added as `extraResources` and ends up in `resources/resources/` in the installed
+   `resources/` is added as `extraResources` and ends up in `resources/resources/` in the installed
    app (`process.resourcesPath + "/resources"`).
-3. **electron-builder 26.15.3** (`apps/desktop/electron-builder.config.mjs`):
+3. **electron-builder 26.15.3** (`electron-builder.config.mjs`):
    * asar packaging, with Electron fuses set: `RunAsNode` off, `NODE_OPTIONS` off, `--inspect` off, asar integrity
      validation on, load the app only from asar, cookie encryption on. Because `RunAsNode` is off,
      `child_process.fork(process.execPath)` does not work in the packaged app. Use `utilityProcess` instead.
@@ -79,7 +78,7 @@ A run removes only the artifacts it rebuilds. For example, `dist:mac` keeps the 
      Catalina or later, it extracts the NSIS uninstaller from the built installer with its own PE reader instead
      of running it under Wine. The makensis, 7-Zip and dmgbuild binaries are downloaded once into
      `~/Library/Caches/electron-builder`. Electron itself is cached in `~/Library/Caches/electron`.
-4. **MSI.** `apps/desktop/installer/msi.mjs` generates the WiX source from `win-unpacked` (see below), builds it
+4. **MSI.** `installer/msi.mjs` generates the WiX source from `win-unpacked` (see below), builds it
    with `wixl`, and post-processes it with `msibuild`.
 5. **Verify.** See [What the checks prove](#what-the-checks-prove).
 6. **Report.** `SHA256SUMS`, `BUILD-REPORT.md`, `verification/`.
@@ -185,7 +184,7 @@ self-signed test certificate: the exe, setup and MSI were all signed and verifie
 * EV and cloud HSM certificates (DigiCert KeyLocker, Azure Trusted Signing, and similar) cannot be exported as
   `.pfx`. Use electron-builder's `win.azureSignOptions`, or a custom `win.signtoolOptions.sign` hook, and sign the
   MSI with the vendor's tool.
-* The setup-stub `.exe` files in `apps/desktop/resources/` are signed too when a certificate is set. If the app
+* The setup-stub `.exe` files in `resources/` are signed too when a certificate is set. If the app
   later modifies those stubs (appends a payload or edits resources), their signature becomes invalid, and they
   have to be re-signed at that point.
 
@@ -194,7 +193,7 @@ self-signed test certificate: the exe, setup and MSI were all signed and verifie
 Releases built by `.github/workflows/release.yml` sign the Windows files with a self-signed code-signing
 certificate (`CN=SoftEther Manager (self-signed)`, RSA 4096, valid until October 2036). The private key is held
 only in the repository secrets `WIN_CSC_LINK` (base64 `.p12`) and `WIN_CSC_KEY_PASSWORD`; the public certificate is
-`apps/desktop/build/codesign/SoftEther-Manager-codesign.cer` and is attached to every release.
+`build/codesign/SoftEther-Manager-codesign.cer` and is attached to every release.
 
 SHA-256 fingerprint: `78:50:7A:2C:60:D3:81:46:DD:1D:3B:EB:6F:AD:72:69:49:6B:42:1B:6A:3B:BE:4F:3E:4B:A4:99:23:E5:B3:39`
 
@@ -307,7 +306,7 @@ vector sources and no browser is involved. It needs macOS (`iconutil`, and Aveni
   variant has no outer shadow and a plate that nearly fills the canvas.
 * `build/background.png` and `background@2x.png`: the DMG window.
 * `src/renderer/assets/app-icon.png`: the 256 px icon shown inside the app.
-* `resources/default.ico` (copied to `tools/setup-stub/default.ico`): the fallback icon for client packages the
+* `resources/default.ico` (copied to `scripts/setup-stub/default.ico`): the fallback icon for client packages the
   app builds when a template has no icon, with fewer sizes because it is embedded in every package.
 
 The mark is a hub: a hexagonal frame with three links meeting at a centre node, amber on charcoal. Each icon is
@@ -317,10 +316,10 @@ drawn once at 1024 px and area-averaged down in linear light for the smaller siz
 
 | Path | Purpose |
 |---|---|
-| `apps/desktop/electron-builder.config.mjs` | electron-builder configuration: `createConfig({ appDir, outDir })`, signing switches |
-| `apps/desktop/scripts/dist.mjs` | The pipeline: build, stage, package, MSI, verify, report |
-| `apps/desktop/scripts/smoke-packaged.mjs` | `pnpm run smoke:packaged`: end-to-end check of the packaged macOS app (see below) |
-| `apps/desktop/installer/msi.mjs` | WiX generator and MSI build: UpgradeCode, `renderWxs`, `buildAppMsi` |
-| `apps/desktop/build/` | `icon.*`, DMG background, entitlements, `icons/generate.mjs`, `verify/window-of-pid.swift`, `win/osslsigncode-wrapper.sh` |
-| `apps/desktop/resources/` | Extra files shipped in `resources/resources/` (owned by the app core) |
-| `apps/desktop/release/` | Output (git-ignored) |
+| `electron-builder.config.mjs` | electron-builder configuration: `createConfig({ appDir, outDir })`, signing switches |
+| `scripts/dist.mjs` | The pipeline: build, stage, package, MSI, verify, report |
+| `scripts/smoke-packaged.mjs` | `pnpm run smoke:packaged`: end-to-end check of the packaged macOS app (see below) |
+| `installer/msi.mjs` | WiX generator and MSI build: UpgradeCode, `renderWxs`, `buildAppMsi` |
+| `build/` | `icon.*`, DMG background, entitlements, `icons/generate.mjs`, `verify/window-of-pid.swift`, `win/osslsigncode-wrapper.sh` |
+| `resources/` | Extra files shipped in `resources/resources/` (owned by the app core) |
+| `release/` | Output (git-ignored) |

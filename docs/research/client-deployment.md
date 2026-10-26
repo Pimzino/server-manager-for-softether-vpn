@@ -1,7 +1,7 @@
 # SoftEther VPN Client: silent Windows deployment with a preconfigured profile
 
-Research date: 2026-09-27. Source tree: `vendor/SoftEtherVPN` (Developer Edition master, last commit 2026-09-22, CMake `BUILD_NUMBER` 5187, version `5.02.<build>`).
-Every path below is relative to `vendor/SoftEtherVPN/` unless it is a URL. "Stable" means github.com/SoftEtherVPN/SoftEtherVPN_Stable (master), which I fetched raw for comparison.
+Research date: 2026-09-27. Source tree: a checkout of github.com/SoftEtherVPN/SoftEtherVPN (Developer Edition master, last commit 2026-09-22, CMake `BUILD_NUMBER` 5187, version `5.02.<build>`).
+Every path below is relative to that checkout unless it is a URL. "Stable" means github.com/SoftEtherVPN/SoftEtherVPN_Stable (master), which I fetched raw for comparison.
 
 ---
 
@@ -402,7 +402,7 @@ It is technically possible (install the exe as a `File`, run it with a type 18 o
 * `hamcore.se2` holds the drivers, `vpndrvinst.exe`, `vpncmdsys.exe` and the string tables.
 * Nothing else is required: 5.x is statically linked (`x64-windows-static`, `.github/workflows/windows_release.yml:36`).
 * Where to get them:
-  * **(a)** Build from `vendor/SoftEtherVPN` on a Windows CI runner. This is the most reproducible, and you can Authenticode-sign the binaries yourself.
+  * **(a)** Build from the SoftEtherVPN source on a Windows CI runner. This is the most reproducible, and you can Authenticode-sign the binaries yourself.
   * **(b)** Extract them from the official SFX: read the PE `DATAFILE` resources `VPNCLIENT.EXE`, `VPNCMD.EXE`, `VPNCMGR.EXE` (4-byte big-endian size + zlib) and `RAW_HAMCORE.SE2` (raw).
     * With Python `pefile`: iterate `DIRECTORY_ENTRY_RESOURCE` → type name `DATAFILE` → for each name: if it starts with `RAW_`, write the bytes as-is, else `zlib.decompress(data[4:])`.
     * Untested against a real release binary. Verify with an E2E run.
@@ -569,7 +569,7 @@ Run these on a clean Windows 11 x64 VM: `msiexec /qn` as SYSTEM (for example `ps
 ---
 
 ## Sources
-* Source tree: `vendor/SoftEtherVPN/src/Cedar/SW.c`, `SWInner.h`, `SW.h`, `Client.c`, `Client.h`, `Command.c`, `Command.h`, `Account.c`, `Sam.c`, `Cedar.h`, `CM.c`; `src/Mayaqua/Cfg.c`, `Cfg.h`, `Encrypt.c`, `Memory.c`, `Microsoft.c`, `Microsoft.h`, `FileIO.c`; `src/GlobalConst.h`; `src/vpndrvinst/*`; `src/CMakeLists.txt`; `.github/workflows/windows_release.yml`; `src/bin/hamcore/DriverPackages/Neo6_Win10/x64/*`; `src/bin/hamcore/strtable_en.stb`.
+* Source tree: `src/Cedar/SW.c`, `SWInner.h`, `SW.h`, `Client.c`, `Client.h`, `Command.c`, `Command.h`, `Account.c`, `Sam.c`, `Cedar.h`, `CM.c`; `src/Mayaqua/Cfg.c`, `Cfg.h`, `Encrypt.c`, `Memory.c`, `Microsoft.c`, `Microsoft.h`, `FileIO.c`; `src/GlobalConst.h`; `src/vpndrvinst/*`; `src/CMakeLists.txt`; `.github/workflows/windows_release.yml`; `src/bin/hamcore/DriverPackages/Neo6_Win10/x64/*`; `src/bin/hamcore/strtable_en.stb`.
 * Stable: https://raw.githubusercontent.com/SoftEtherVPN/SoftEtherVPN_Stable/master/src/GlobalConst.h, `.../src/Cedar/SW.c`, `.../src/Cedar/Client.c`, `.../src/Cedar/Account.c`, `.../src/Mayaqua/Microsoft.h`
 * Releases: https://github.com/SoftEtherVPN/SoftEtherVPN/releases (API `releases/latest` = 5.2.5188), https://github.com/SoftEtherVPN/SoftEtherVPN_Stable/releases, https://www.softether-download.com/files/softether/ (and `v4.44-9807-rtm-2025.04.16-tree/files.txt`)
 * Issues and workarounds: https://github.com/SoftEtherVPN/SoftEtherVPN/issues/195, https://github.com/SoftEtherVPN/SoftEtherVPN/issues/444, https://gist.github.com/checkin247/df20b55f55529b70d141b4db2cf5061a, https://github.com/spanishdexter/SoftEther-VPN-Client-Silent-Installer-Script

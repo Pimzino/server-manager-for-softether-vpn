@@ -1,9 +1,5 @@
-packages:
-  - packages/*
-  - apps/*
-
-# Flat node_modules: electron-builder and the packaging/E2E scripts resolve tools (electron, app-builder-lib,
-# @electron/asar, vite...) from the workspace root, which pnpm's default isolated layout does not expose.
+# Flat node_modules: electron-builder and the packaging/E2E scripts resolve transitive tools (app-builder-lib,
+# @electron/asar...) from node_modules, which pnpm's default isolated layout does not expose.
 nodeLinker: hoisted
 
 # Supply-chain hardening

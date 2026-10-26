@@ -1,9 +1,9 @@
 name: Release
 
-# Packages the desktop app (macOS dmg/zip, Windows NSIS setup/zip/MSI) with apps/desktop/scripts/dist.mjs,
+# Packages the desktop app (macOS dmg/zip, Windows NSIS setup/zip/MSI) with scripts/dist.mjs,
 # which also verifies every artifact, and publishes a draft GitHub release.
 #
-#   release:  bump "version" in apps/desktop/package.json on main, then push the tag v<version>
+#   release:  bump "version" in package.json on main, then push the tag v<version>
 #   dry run:  run this workflow manually, or open a PR that touches the packaging files: the
 #             installers are built and verified and kept as a workflow artifact, nothing is published
 on:
@@ -13,11 +13,11 @@ on:
   pull_request:
     paths:
       - .github/workflows/release.yml
-      - apps/desktop/scripts/**
-      - apps/desktop/installer/**
-      - apps/desktop/build/**
-      - apps/desktop/electron-builder.config.mjs
-      - apps/desktop/package.json
+      - scripts/**
+      - installer/**
+      - build/**
+      - electron-builder.config.mjs
+      - package.json
 
 permissions:
   contents: read
@@ -46,13 +46,13 @@ jobs:
         with:
           node-version: 24
       - run: corepack enable
-      - name: Version (a release tag must match apps/desktop/package.json)
+      - name: Version (a release tag must match package.json)
         id: version
         run: |
-          version="$(node -p 'require("./apps/desktop/package.json").version')"
+          version="$(node -p 'require("./package.json").version')"
           echo "version=$version" >> "$GITHUB_OUTPUT"
           if [ "$GITHUB_REF_TYPE" = "tag" ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
-            echo "::error::tag $GITHUB_REF_NAME does not match apps/desktop/package.json version $version (expected v$version)"
+            echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version (expected v$version)"
             exit 1
           fi
       - name: MSI tools (wixl)
@@ -71,21 +71,21 @@ jobs:
           if [ -z "$WIN_CSC_LINK" ]; then unset WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; fi
           # --no-cross-launch: the x64 macOS build is verified but not started (Rosetta in the runner VM never
           # brings Electron up); the arm64 build is started and screenshotted
-          pnpm --filter @sem/desktop run dist --no-cross-launch
-          cp apps/desktop/build/codesign/SoftEther-Manager-codesign.cer apps/desktop/release/
+          pnpm run dist --no-cross-launch
+          cp build/codesign/SoftEther-Manager-codesign.cer release/
       - name: Build report
         if: always()
-        run: cat apps/desktop/release/BUILD-REPORT.md >> "$GITHUB_STEP_SUMMARY" || true
+        run: cat release/BUILD-REPORT.md >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: installers
           path: |
-            apps/desktop/release/*.dmg
-            apps/desktop/release/*.zip
-            apps/desktop/release/*.exe
-            apps/desktop/release/*.msi
-            apps/desktop/release/*.cer
-            apps/desktop/release/SHA256SUMS
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.msi
+            release/*.cer
+            release/SHA256SUMS
           if-no-files-found: error
           compression-level: 0
           retention-days: 7
@@ -94,8 +94,8 @@ jobs:
         with:
           name: build-report
           path: |
-            apps/desktop/release/BUILD-REPORT.md
-            apps/desktop/release/verification
+            release/BUILD-REPORT.md
+            release/verification
           retention-days: 7
 
   # ---------------------------------------------------------------------------------------------

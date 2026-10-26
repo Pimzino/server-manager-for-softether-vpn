@@ -39,10 +39,8 @@ jobs:
         run: corepack enable
       - run: pnpm install --frozen-lockfile
       - run: pnpm run typecheck
-      - name: Build web edition
-        run: pnpm run build
       - name: Build desktop app
-        run: pnpm --filter @sem/desktop run build
+        run: pnpm run build
 
   # ---------------------------------------------------------------------------------------------
   e2e-desktop:
@@ -74,10 +72,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: se-build
-          key: softether-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/ci/build-softether.sh') }}
+          key: softether-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('scripts/ci/build-softether.sh') }}
       - name: Build SoftEther VPN from source (pinned release)
         if: steps.se-cache.outputs.cache-hit != 'true'
-        run: bash tools/ci/build-softether.sh "$PWD/se-build"
+        run: bash scripts/ci/build-softether.sh "$PWD/se-build"
       - run: pnpm install --frozen-lockfile
       - name: Run desktop E2E suite
         env:
@@ -85,23 +83,23 @@ jobs:
           E2E_DESK_RUN_DIR: ${{ runner.temp }}/se-desk-e2e
         run: |
           if [ "$RUNNER_OS" = "Linux" ]; then
-            xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" pnpm run e2e:desktop
+            xvfb-run --auto-servernum --server-args="-screen 0 1600x1000x24" pnpm run e2e
           else
-            pnpm run e2e:desktop
+            pnpm run e2e
           fi
       - name: Summary
         if: always()
-        run: cat e2e-desktop/artifacts/SUMMARY.md >> "$GITHUB_STEP_SUMMARY" || true
+        run: cat e2e/artifacts/SUMMARY.md >> "$GITHUB_STEP_SUMMARY" || true
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: e2e-desktop-${{ matrix.os }}
           path: |
-            e2e-desktop/artifacts/SUMMARY.md
-            e2e-desktop/artifacts/results.json
-            e2e-desktop/artifacts/report
-            e2e-desktop/artifacts/screenshots
-            e2e-desktop/artifacts/test-results
+            e2e/artifacts/SUMMARY.md
+            e2e/artifacts/results.json
+            e2e/artifacts/report
+            e2e/artifacts/screenshots
+            e2e/artifacts/test-results
           retention-days: 7
 
   # ---------------------------------------------------------------------------------------------
@@ -126,7 +124,7 @@ jobs:
             Invoke-WebRequest "$env:SE_RELEASE_URL/$($a[0])" -OutFile $f
             $h = (Get-FileHash $f -Algorithm SHA256).Hash.ToLower()
             if ($h -ne $a[1]) { throw "checksum mismatch for $($a[0]): $h" }
-            node tools/ci/extract-sfx.ts $f se-build
+            node scripts/ci/extract-sfx.ts $f se-build
           }
           Get-ChildItem se-build | Format-Table Name, Length
       - name: Run desktop E2E suite (SoftEther as Windows services, MSI built with WiX Toolset)
@@ -134,23 +132,23 @@ jobs:
         env:
           SE_BUILD_DIR: ${{ github.workspace }}\se-build
           E2E_DESK_RUN_DIR: ${{ runner.temp }}\se-desk-e2e
-        run: pnpm exec playwright test -c e2e-desktop/playwright.config.ts
+        run: pnpm exec playwright test -c e2e/playwright.config.ts
       - name: Summary
         if: always()
         shell: pwsh
         run: |
-          node e2e-desktop/summarize.ts
-          if (Test-Path e2e-desktop/artifacts/SUMMARY.md) { Get-Content e2e-desktop/artifacts/SUMMARY.md | Add-Content $env:GITHUB_STEP_SUMMARY }
+          node e2e/summarize.ts
+          if (Test-Path e2e/artifacts/SUMMARY.md) { Get-Content e2e/artifacts/SUMMARY.md | Add-Content $env:GITHUB_STEP_SUMMARY }
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: e2e-desktop-windows-2025
           path: |
-            e2e-desktop/artifacts/SUMMARY.md
-            e2e-desktop/artifacts/results.json
-            e2e-desktop/artifacts/report
-            e2e-desktop/artifacts/screenshots
-            e2e-desktop/artifacts/test-results
+            e2e/artifacts/SUMMARY.md
+            e2e/artifacts/results.json
+            e2e/artifacts/report
+            e2e/artifacts/screenshots
+            e2e/artifacts/test-results
           retention-days: 7
 
   # ---------------------------------------------------------------------------------------------
@@ -172,7 +170,7 @@ jobs:
           curl -fsSL -o "$RUNNER_TEMP/$SE_CLIENT_X64" "$SE_RELEASE_URL/$SE_CLIENT_X64"
           echo "$SE_CLIENT_X64_SHA256  $RUNNER_TEMP/$SE_CLIENT_X64" | sha256sum -c -
       - name: Build branded MSI and setup.exe
-        run: node tools/ci/build-client-packages.ts "$RUNNER_TEMP/$SE_CLIENT_X64" "$PWD/client-packages"
+        run: node scripts/ci/build-client-packages.ts "$RUNNER_TEMP/$SE_CLIENT_X64" "$PWD/client-packages"
       - name: Inspect
         run: |
           ls -l client-packages
@@ -209,7 +207,7 @@ jobs:
           if ($h -ne $env:SE_SERVER_X64_SHA256) { throw "checksum mismatch: $h" }
       - name: Install, connect, upgrade, uninstall
         shell: pwsh
-        run: tools/ci/windows-install-test.ps1 -PackagesDir client-packages -ServerSfx (Join-Path $env:RUNNER_TEMP $env:SE_SERVER_X64) -OutDir install-test
+        run: scripts/ci/windows-install-test.ps1 -PackagesDir client-packages -ServerSfx (Join-Path $env:RUNNER_TEMP $env:SE_SERVER_X64) -OutDir install-test
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:

@@ -8,14 +8,14 @@ deployment files: `.vpn` connection profiles and silent-install **MSI** packages
 
 Built with Electron 44, React 19 and Mantine 9. Version 1.0.0.
 
-![Fleet overview](apps/desktop/design-screenshots/final/01-fleet-light.png)
+![Fleet overview](design-screenshots/final/01-fleet-light.png)
 
 | | |
 |---|---|
-| ![New connection](apps/desktop/design-screenshots/final/07-sheet-add-connection-light.png) | ![Users of a Virtual Hub](apps/desktop/design-screenshots/final/03-hub-05-users-dark.png) |
-| ![Server overview](apps/desktop/design-screenshots/final/02-server-01-1-dark.png) | ![Client installers](apps/desktop/design-screenshots/final/04-deploy-05-installers-light.png) |
+| ![New connection](design-screenshots/final/07-sheet-add-connection-light.png) | ![Users of a Virtual Hub](design-screenshots/final/03-hub-05-users-dark.png) |
+| ![Server overview](design-screenshots/final/02-server-01-1-dark.png) | ![Client installers](design-screenshots/final/04-deploy-05-installers-light.png) |
 
-More screenshots, in light and dark mode, are in [`apps/desktop/design-screenshots/final/`](apps/desktop/design-screenshots/final).
+More screenshots, in light and dark mode, are in [`design-screenshots/final/`](design-screenshots/final).
 
 ## How it works
 
@@ -43,7 +43,7 @@ either.
 | **JSON-RPC** | The server's `https://<host>:<port>/api/` JSON-RPC 2.0 endpoint. | When you prefer the documented web API. It must be enabled on the server (it is by default). If it is off, the app says so and points you to Native. |
 
 Both transports reach all 148 admin RPCs in SoftEther's `Admin.c` (the list is in
-`packages/api-catalog/catalog.json`).
+`src/shared/catalog/catalog.json`).
 
 ## Features
 
@@ -68,7 +68,7 @@ model, the IPC bridge and the transport contract are in [`docs/desktop-architect
 
 ## Install
 
-Download the file for your platform from `apps/desktop/release/` (or from wherever you publish the build).
+Download the file for your platform from `release/` (or from wherever you publish the build).
 
 ### macOS (13 Ventura or later)
 
@@ -153,15 +153,14 @@ Every installer, for macOS and for Windows, is built on a Mac. You do not need W
 
 ```sh
 brew install msitools          # wixl and msiinfo, used for the MSI
-pnpm install --frozen-lockfile                         # from the repository root, once
-cd apps/desktop
+pnpm install --frozen-lockfile  # once
 pnpm run dist                   # all installers: mac arm64 + x64 (dmg, zip), win x64 + arm64 (NSIS, zip), win x64 MSI
 pnpm run dist:mac               # macOS only
 pnpm run dist:win               # Windows only, with the MSI
 pnpm run smoke:packaged         # start the packaged arm64 app against a real vpnserver and add connections through the UI
 ```
 
-The output goes to `apps/desktop/release/`. `BUILD-REPORT.md` lists every file with its size and SHA-256, and every
+The output goes to `release/`. `BUILD-REPORT.md` lists every file with its size and SHA-256, and every
 check that ran. `SHA256SUMS` can be checked with `shasum -a 256 -c SHA256SUMS`. The checks cover code signatures,
 Electron fuses, the asar contents, the DMG and ZIP layout, PE headers and version resources of the Windows files,
 every MSI table, and a byte-for-byte comparison of the MSI and ZIP contents with the unpacked app. They also start
@@ -174,7 +173,6 @@ are switched on by environment variables only. See [`docs/desktop-packaging.md`]
 Development:
 
 ```sh
-cd apps/desktop
 pnpm run dev                    # watch main/preload, Vite dev server, start Electron against it
 pnpm run build && pnpm start     # production build of dist/, then start it
 pnpm run typecheck              # main + renderer
@@ -182,8 +180,8 @@ pnpm run typecheck              # main + renderer
 
 ## Tests
 
-The tests are end-to-end only. `pnpm run e2e:desktop` (from the repository root) runs the Playwright suite in
-[`e2e-desktop/`](e2e-desktop). It builds the real app and drives it with Playwright's `_electron`, against:
+The tests are end-to-end only. `pnpm run e2e` runs the Playwright suite in
+[`e2e/`](e2e). It builds the real app and drives it with Playwright's `_electron`, against:
 
 * two real SoftEther VPN Servers built from source: **A** with the JSON-RPC API turned off (reached over the Native
   transport and checked with `vpncmd`), and **B** with an admin password (reached over JSON-RPC);
@@ -196,12 +194,12 @@ servers, listeners, the API console, bulk runs, backup/diff/restore, a password 
 every server and hub page, `.vpn` import into the real client, and an MSI checked with `msiinfo` and `msiextract`.
 Every result is checked against the servers directly, not only in the UI.
 
-Each run writes `e2e-desktop/artifacts/SUMMARY.md` (every test with its status and notes, and the SHA-256 of every
+Each run writes `e2e/artifacts/SUMMARY.md` (every test with its status and notes, and the SHA-256 of every
 generated file), an HTML report, the screenshots, and the generated `.vpn` and `.msi` files.
 
-`pnpm run smoke:packaged` (in `apps/desktop`) does the same kind of check on the **packaged** app: it unzips the
+`pnpm run smoke:packaged` does the same kind of check on the **packaged** app: it unzips the
 release `.zip`, starts a real vpnserver on port 16201, adds a Native and a JSON-RPC connection through the UI, and
-saves screenshots and `result.json` to `apps/desktop/release/verification/packaged-smoke/`.
+saves screenshots and `result.json` to `release/verification/packaged-smoke/`.
 
 ## Limitations
 
@@ -223,19 +221,21 @@ Not verified on the build machine:
 ## Repository layout
 
 ```
-apps/desktop          the desktop app (Electron main, preload, React renderer, packaging, installers)
-e2e-desktop           the desktop E2E suite
-packages/api-catalog  the SoftEther admin RPC catalog (methods, types, enums, errors, risk classification)
+src/main              Electron main process: in-process API, SoftEther transports, deployment builders
+src/preload           the IPC bridge
+src/renderer          the React UI
+src/shared            types shared by all three, and the SoftEther admin RPC catalog (src/shared/catalog)
+scripts/              build, packaging (dist.mjs), the packaged-app smoke test, CI scripts, setup-stub source,
+                      screenshot capture, and the catalog / PACK-hint generators
+build/, installer/    icons, entitlements, signing helpers; the WiX generator for the app's MSI
+resources/            files shipped with the app (setup.exe launcher stubs, default client icon)
+e2e/                  the E2E suite
 docs/                 desktop-architecture.md, desktop-design.md, desktop-packaging.md, research/
-tools/                catalog generator, setup-stub source, development helpers
-apps/server, apps/web the legacy web edition (see below)
+.github/              CI (type-check, build, E2E on macOS/Linux/Windows) and the release workflow
 ```
 
-### Legacy web edition
+The generators read SoftEther's source from a checkout of github.com/SoftEtherVPN/SoftEtherVPN:
+`SOFTETHER_SRC=~/SoftEtherVPN pnpm run gen:catalog` and `SOFTETHER_SRC=~/SoftEtherVPN python3 scripts/gen-hints.py`.
 
-`apps/server` (Node + Fastify) and `apps/web` (React) are the earlier **multi-user web edition**: a server you host,
-with local accounts, roles, MFA, API tokens and an audit log, reached over JSON-RPC only. The desktop app was ported
-from it and replaces it. It is kept in the repository **for reference only** and is not developed further. Its
-own E2E suite is `pnpm run e2e` ([`e2e/`](e2e)), and its hosting notes are in [`docs/operations.md`](docs/operations.md)
-(with `Dockerfile` and `deploy/`). The research on how SoftEther clients can be deployed silently, which both
-editions use, is in [`docs/research/client-deployment.md`](docs/research/client-deployment.md).
+The research on how SoftEther clients can be deployed silently is in
+[`docs/research/client-deployment.md`](docs/research/client-deployment.md).
