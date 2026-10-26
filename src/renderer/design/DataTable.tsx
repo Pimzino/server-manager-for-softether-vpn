@@ -1,6 +1,6 @@
 // Dense native-style table: sortable columns, filter field, single/multi row selection with keyboard,
-// right-click context menu, double-click/Enter to open, sticky header, empty/loading/error states.
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
+// right-click context menu, double-click/Enter to open, sticky header, empty/loading/error states, resizable columns.
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactNode } from "react";
 import { Button, Checkbox, CloseButton, TextInput } from "@mantine/core";
 import { IconChevronDown, IconChevronUp, IconSearch } from "@tabler/icons-react";
 import { EmptyState, ErrorState, TableSkeleton } from "./States";
@@ -67,6 +67,13 @@ export interface DataTableProps<T> {
 }
 
 type Sort = { key: string; dir: "asc" | "desc" } | null;
+type Widths = Record<string, number>;
+
+// Column widths set by dragging a header edge, remembered per column set (tables showing the same columns share them).
+// The last column has no handle: it fills whatever space the others leave.
+const MIN_COL = 40, LAST_COL_MIN = 80;
+const widthsKey = (columns: Column<unknown>[]) => `sem-col-widths:${columns.map((c) => c.key).join(",")}`;
+const loadWidths = (key: string): Widths | null => JSON.parse(localStorage.getItem(key) ?? "null");
 
 function isEmptyObj(e: DataTableProps<unknown>["empty"]): e is { title: ReactNode; description?: ReactNode; action?: ReactNode; icon?: ReactNode } {
   return !!e && typeof e === "object" && "title" in (e as object);
@@ -87,6 +94,36 @@ export function DataTable<T>(props: DataTableProps<T>) {
   const bodyRef = useRef<HTMLTableSectionElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState(false);
+  const wKey = widthsKey(columns as Column<unknown>[]);
+  const [stored, setStored] = useState(() => ({ key: wKey, w: loadWidths(wKey) }));
+  const widths = stored.key === wKey ? stored.w : loadWidths(wKey);
+  const [resizing, setResizing] = useState<string | null>(null);
+
+  // Drag a header edge. The first drag freezes every column at its current rendered width (fixed layout from then on).
+  const startResize = (e: PointerEvent<HTMLElement>, key: string) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const ths = [...handle.closest("tr")!.querySelectorAll<HTMLElement>("th[data-col]")].slice(0, -1);
+    const base = widths ?? Object.fromEntries(ths.map((th) => [th.dataset.col!, Math.ceil(th.getBoundingClientRect().width)]));
+    const start = base[key], x0 = e.clientX;
+    if (start === undefined) throw new Error(`DataTable: no width for column ${key}`);
+    let next: Widths | null = null;
+    const move = (ev: globalThis.PointerEvent) => {
+      next = { ...base, [key]: Math.max(MIN_COL, Math.round(start + ev.clientX - x0)) };
+      setStored({ key: wKey, w: next });
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      setResizing(null);
+      if (next) localStorage.setItem(wKey, JSON.stringify(next));
+    };
+    handle.setPointerCapture(e.pointerId);
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("lostpointercapture", end, { once: true });
+    setResizing(key);
+  };
+  const resetWidths = () => { localStorage.removeItem(wKey); setStored({ key: wKey, w: null }); };
 
   // Scroll sideways only when the columns don't fit, so the header can stick to the page otherwise.
   useEffect(() => {
@@ -263,11 +300,13 @@ export function DataTable<T>(props: DataTableProps<T>) {
       >
         <table
           className="sem-table" data-selectable={selectable || undefined} data-clickable={!!(onRowClick || onRowOpen) || undefined}
+          data-resized={widths ? true : undefined}
+          style={widths ? { tableLayout: "fixed", width: `max(100%, ${Object.values(widths).reduce((a, b) => a + b, multi ? 30 + LAST_COL_MIN : LAST_COL_MIN)}px)` } : undefined}
           role={selectable ? "grid" : undefined} aria-label={props["aria-label"]} aria-multiselectable={multi || undefined} aria-rowcount={rows.length + 1}
         >
           <colgroup>
             {multi && <col style={{ width: 30 }} />}
-            {columns.map((c) => <col key={c.key} style={{ width: c.width }} />)}
+            {columns.map((c, i) => <col key={c.key} style={{ width: widths ? (i < columns.length - 1 ? widths[c.key] : undefined) : c.width }} />)}
           </colgroup>
           <thead>
             <tr>
@@ -279,9 +318,16 @@ export function DataTable<T>(props: DataTableProps<T>) {
                   />
                 </th>
               )}
-              {columns.map((c) => (
-                <th key={c.key} style={{ textAlign: c.align }} data-align={c.align} aria-sort={sort?.key === c.key ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}>
+              {columns.map((c, i) => (
+                <th key={c.key} data-col={c.key} style={{ textAlign: c.align }} data-align={c.align} aria-sort={sort?.key === c.key ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}>
                   {header(c)}
+                  {i < columns.length - 1 && (
+                    <span
+                      className="sem-th-resize" data-active={resizing === c.key || undefined} data-testid={testId ? `${testId}-resize-${c.key}` : undefined}
+                      role="separator" aria-orientation="vertical" aria-label="Resize column (double-click to reset all)"
+                      onPointerDown={(e) => startResize(e, c.key)} onDoubleClick={resetWidths}
+                    />
+                  )}
                 </th>
               ))}
             </tr>

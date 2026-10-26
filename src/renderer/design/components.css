@@ -372,6 +372,11 @@ button.sem-metric:hover { background: var(--sem-fill-hover); }
 .sem-th-sort[data-active] { color: var(--sem-text); }
 .sem-th-sort[data-active] .sem-th-icon { opacity: 1; }
 th[data-align="right"] .sem-th-sort { flex-direction: row-reverse; }
+.sem-th-resize { position: absolute; top: 0; right: 0; width: 7px; height: 100%; cursor: col-resize; touch-action: none; }
+.sem-th-resize::after { content: ""; position: absolute; top: 5px; bottom: 5px; right: 0; width: 2px; border-radius: 1px; background: var(--sem-accent); opacity: 0; }
+.sem-th-resize:hover::after, .sem-th-resize[data-active]::after { opacity: 1; }
+.sem-table[data-resized] :is(thead th, tbody td:not([data-wrap])) { overflow: hidden; text-overflow: ellipsis; }
+.sem-table[data-resized] .sem-th-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .sem-th-check, .sem-td-check { width: 30px; padding: 0 0 0 10px !important; }
 .sem-table tbody td { padding: 2px 10px; height: var(--sem-row-h); vertical-align: middle; border-bottom: 0; white-space: nowrap; }
 .sem-table tbody td[data-wrap] { white-space: normal; padding-block: 4px; }
