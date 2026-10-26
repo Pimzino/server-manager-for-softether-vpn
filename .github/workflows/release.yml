@@ -1,11 +1,13 @@
 name: Release
 
 # Packages the desktop app (macOS dmg/zip, Windows NSIS setup/zip/MSI) with scripts/dist.mjs,
-# which also verifies every artifact, and publishes a draft GitHub release.
+# which also verifies every artifact, and publishes a draft GitHub release whose body lists the commits since the
+# previous tag (scripts/ci/release-notes.sh).
 #
 #   release:  bump "version" in package.json on main, then push the tag v<version>
 #   dry run:  run this workflow manually, or open a PR that touches the packaging files: the
-#             installers are built and verified and kept as a workflow artifact, nothing is published
+#             installers are built and verified and the release notes for that commit are generated, all kept
+#             as workflow artifacts, nothing is published
 on:
   push:
     tags: ["v*"]
@@ -99,10 +101,36 @@ jobs:
           retention-days: 7
 
   # ---------------------------------------------------------------------------------------------
+  notes:
+    name: Release notes (commits since the previous tag)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Release notes
+        run: |
+          tag="$GITHUB_REF_NAME"
+          # Dry run: the notes a release of this commit would get
+          if [ "$GITHUB_REF_TYPE" != tag ]; then
+            tag="v$(node -p 'require("./package.json").version')-dry-run"
+            git tag "$tag"
+          fi
+          bash scripts/ci/release-notes.sh "$tag" > release-notes.md
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 7
+
+  # ---------------------------------------------------------------------------------------------
   release:
     name: Draft GitHub release
     if: github.ref_type == 'tag'
-    needs: [ci, package]
+    needs: [ci, package, notes]
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -115,6 +143,9 @@ jobs:
         with:
           name: installers
           path: installers
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-notes
       - name: Verify checksums
         working-directory: installers
         run: sha256sum -c SHA256SUMS
@@ -129,5 +160,5 @@ jobs:
         run: |
           flags=()
           case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
-          gh release create "$GITHUB_REF_NAME" installers/* --draft --verify-tag --generate-notes \
+          gh release create "$GITHUB_REF_NAME" installers/* --draft --verify-tag --notes-file release-notes.md \
             --title "Server Manager for SoftEther VPN ${GITHUB_REF_NAME#v}" "${flags[@]}"
