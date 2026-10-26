@@ -57,8 +57,13 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match package.json version $version (expected v$version)"
             exit 1
           fi
-      - name: MSI tools (wixl)
-        run: brew install msitools
+      # osslsigncode from Homebrew, not electron-builder's win-codesign bundle: that binary links against Homebrew's
+      # openssl@3 dynamically and stops loading when the runner image ships a different OpenSSL ("Symbol not found:
+      # _OPENSSL_sk_set_thunks" on macos-26-arm64 20261021). The formula is built against the OpenSSL it installs.
+      - name: MSI tools (wixl) and osslsigncode
+        run: |
+          brew install msitools osslsigncode
+          echo "OSSLSIGNCODE=$(brew --prefix)/bin/osslsigncode" >> "$GITHUB_ENV"
       - run: pnpm install --frozen-lockfile
       # Windows files (app, setup, MSI) are Authenticode-signed with the project's self-signed certificate when
       # the secrets are available (not on pull requests from forks). See docs/desktop-packaging.md.

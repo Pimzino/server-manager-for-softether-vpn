@@ -168,6 +168,10 @@ pnpm run dist:win
 On macOS, electron-builder signs `Server Manager for SoftEther VPN.exe`, the NSIS installer, its uninstaller, and every other `.exe`
 in the app with `osslsigncode`. The config pins `toolsets.winCodeSign: "1.1.0"` so the downloaded osslsigncode (2.11)
 runs natively on Apple silicon. `dist.mjs` then signs the MSI with the same osslsigncode and certificate.
+Set `OSSLSIGNCODE` to use another osslsigncode binary instead. The release workflow sets it to Homebrew's
+(`brew install osslsigncode`, 2.14): the bundled binary links against Homebrew's `openssl@3` dynamically and fails to
+load ("Symbol not found: _OPENSSL_sk_set_thunks") when the machine has a different OpenSSL, as the macos-26-arm64
+runner image 20261021 does.
 
 **Workaround applied:** electron-builder 26.15.3 starts osslsigncode with `execFile`, which gives it a stdin pipe.
 With a stdin pipe, osslsigncode 2.11 cannot open a password-protected `.pfx` ("Failed to read certificate from:
