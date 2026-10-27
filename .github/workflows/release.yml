@@ -1,7 +1,7 @@
 name: Release
 
 # Packages the desktop app (macOS dmg/zip, Windows NSIS setup/zip/MSI) with scripts/dist.mjs,
-# which also verifies every artifact, and publishes a draft GitHub release whose body lists the commits since the
+# which also verifies every artifact, and publishes a GitHub release whose body lists the commits since the
 # previous tag (scripts/ci/release-notes.sh).
 #
 #   release:  bump "version" in package.json on main, then push the tag v<version>
@@ -133,7 +133,7 @@ jobs:
 
   # ---------------------------------------------------------------------------------------------
   release:
-    name: Draft GitHub release
+    name: Publish GitHub release
     if: github.ref_type == 'tag'
     needs: [ci, package, notes]
     runs-on: ubuntu-24.04
@@ -158,12 +158,13 @@ jobs:
       - uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-checksums: installers/SHA256SUMS
-      - name: Create the draft release
+      # gh keeps the release a draft while the assets upload and publishes it once they are all there
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
           flags=()
           case "$GITHUB_REF_NAME" in *-*) flags+=(--prerelease) ;; esac
-          gh release create "$GITHUB_REF_NAME" installers/* --draft --verify-tag --notes-file release-notes.md \
+          gh release create "$GITHUB_REF_NAME" installers/* --verify-tag --notes-file release-notes.md \
             --title "Server Manager for SoftEther VPN ${GITHUB_REF_NAME#v}" "${flags[@]}"
